@@ -653,7 +653,7 @@ const aflwPlayers=[
 ];
 var currentSquad="afl";
 const APPROVAL={Retail:["admin","retail-approver"],Commercial:["admin","commercial-approver"]};
-const BOARD_ID=18412284375;
+const BOARD_ID="18412284375";
 const REQUESTS_GROUP="group_mm35jzs7";
 const PLAYERS_GROUP="group_mm354464";
 const AFLW_PLAYERS_GROUP="group_mm35q3j5";
@@ -667,33 +667,41 @@ const PLAYER_MONDAY_IDS={p1:11958337028,p2:11958315221,p3:11958315296,p4:1195832
 const REQUEST_MONDAY_IDS={r1:11958363260,r2:11958337135,r3:11958363421,r4:11958363243,r5:11958359634,r6:11958359408,r7:11958359477,r8:11958363426};
 var newItemIds={};
 var monday=null;
-// monday.com API token — replace with your personal API token from monday.com profile > Admin > API
 var MONDAY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDUxNzk2NCwiYWFpIjoxMSwidWlkIjo4MjY0Njg5NiwiaWFkIjoiMjAyNi0wNS0wNlQwNzoxOTowNi4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzA5Mjc2LCJyZ24iOiJ1c2UxIn0.S91_48zIq-aPoxjEBHuBuRLTSwPizmnHZsPQYGysQwU";
 
 function getMondayClient(){if(!monday&&window.mondaySdk){monday=window.mondaySdk();monday.setApiVersion("2024-01")}return monday}
 
 function mondayApi(query,vars){
-  // Prefer direct REST API if token is set (works in HTML embed without registered app)
-  if(MONDAY_TOKEN){
-    return fetch("https://api.monday.com/v2",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":MONDAY_TOKEN,"API-Version":"2024-01"},
-      body:JSON.stringify({query:query,variables:vars||{}})
-    }).then(function(r){return r.json()}).then(function(r){
-      if(r.errors){console.warn("monday API errors:",r.errors)}
-      return r;
-    }).catch(function(e){console.warn("monday fetch error:",e);return null});
-  }
-  // Fallback to SDK (works in registered monday app context)
+  console.log("mondayApi called, vars:",JSON.stringify(vars));
+  // Primary: use SDK (works as registered monday app — full auth context)
   var sdk=getMondayClient();
-  if(!sdk)return Promise.resolve(null);
-  return sdk.api(query,{variables:vars||{}}).catch(function(e){console.warn("monday API error:",e);return null});
+  if(sdk){
+    return sdk.api(query,{variables:vars||{}}).then(function(r){
+      if(r&&r.errors)console.warn("monday API errors:",r.errors);
+      else console.log("monday API success:",JSON.stringify(r).slice(0,100));
+      return r;
+    }).catch(function(e){
+      console.warn("SDK api failed, trying direct fetch:",e);
+      return mondayApiFetch(query,vars);
+    });
+  }
+  // Fallback: direct REST fetch with personal token
+  return mondayApiFetch(query,vars);
+}
+
+function mondayApiFetch(query,vars){
+  if(!MONDAY_TOKEN)return Promise.resolve(null);
+  return fetch("https://api.monday.com/v2",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":MONDAY_TOKEN,"API-Version":"2024-01"},
+    body:JSON.stringify({query:query,variables:vars||{}})
+  }).then(function(r){return r.json()}).catch(function(e){console.warn("monday fetch error:",e);return null});
 }
 function syncPlayerDetailsToMonday(playerId,p){
   var mondayId=PLAYER_MONDAY_IDS[playerId];if(!mondayId)return;
   var cv={};cv[COL.player_number]=String(p.num);cv[COL.position]=p.pos;cv[COL.restricted]={checked:p.restricted?"true":"false"};if(p.img)cv[COL.photo]=p.img;
-  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv){id}}',{bid:BOARD_ID,iid:mondayId,cv:JSON.stringify(cv)});
-  mondayApi('mutation($iid:ID!,$name:String!){change_item_value(item_id:$iid,board_id:'+BOARD_ID+',column_id:"name",value:$name){id}}',{iid:mondayId,name:p.name});
+  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv){id}}',{bid:BOARD_ID,iid:String(mondayId),cv:JSON.stringify(cv)});
+  mondayApi('mutation($iid:ID!,$name:String!){change_item_value(item_id:$iid,board_id:'+BOARD_ID+',column_id:"name",value:$name){id}}',{iid:String(mondayId),name:p.name});
 }
 function syncBalanceToMonday(playerId,newBal){
   var mondayId=PLAYER_MONDAY_IDS[playerId];if(!mondayId)return;
@@ -702,6 +710,7 @@ function syncBalanceToMonday(playerId,newBal){
 function syncRequestToMonday(reqId,fields){
   var r=requests.find(function(x){return x.id===reqId});
   var mondayId=REQUEST_MONDAY_IDS[reqId]||newItemIds[reqId]||(r&&r.mondayId);
+  console.log("syncRequestToMonday",reqId,"mondayId:",mondayId,"fields:",JSON.stringify(fields));
   if(!mondayId){if(r)createRequestOnMonday(r);return}
   var cv={};
   if(fields.status!==undefined)cv[COL.status]={label:fields.status};
@@ -713,7 +722,7 @@ function syncRequestToMonday(reqId,fields){
   if(fields.briefed!==undefined)cv[COL.briefed]={label:fields.briefed?"Yes":"No"};
   if(fields.approved!==undefined)cv[COL.approved]={label:fields.approved?"Approved":"Pending"};
   if(fields.type!==undefined)cv[COL.req_type]={label:fields.type};
-  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv,create_labels_if_missing:true){id}}',{bid:BOARD_ID,iid:mondayId,cv:JSON.stringify(cv)});
+  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv,create_labels_if_missing:true){id}}',{bid:BOARD_ID,iid:String(mondayId),cv:JSON.stringify(cv)});
 }
 function createRequestOnMonday(req){
   var playerNames=req.players.map(function(pid){var p=players.find(function(pl){return pl.id===pid});return p?p.name:""}).filter(Boolean).join(", ");
@@ -734,7 +743,7 @@ function createRequestOnMonday(req){
 }
 function deleteRequestOnMonday(reqId){
   var mondayId=REQUEST_MONDAY_IDS[reqId]||newItemIds[reqId];if(!mondayId)return;
-  mondayApi('mutation($iid:ID!){delete_item(item_id:$iid){id}}',{iid:mondayId});
+  mondayApi('mutation($iid:ID!){delete_item(item_id:$iid){id}}',{iid:String(mondayId)});
 }
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 var pinConfig={admin:"3942","retail-approver":"3973","commercial-approver":"1972","balance-updater":"1559"};
