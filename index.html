@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.jsdelivr.net/npm/monday-sdk-js/dist/main.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASA Player Requests Hub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--navy:#0d1b2a;--teal:#008aab;--teal-light:#00b4d8;--white:#fff;--off-white:#f4f6f8;--border:#e2e8f0;--text:#1a2636;--muted:#64748b;--confirmed:#16a34a;--tentative:#d97706;--planned:#3b82f6;--tbc:#94a3b8;--red:#dc2626;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.14)}
+  body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+  .hub-header{background:var(--navy);padding:8px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
+  .hub-logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;letter-spacing:-.3px}
+  .hub-logo-icon{width:28px;height:28px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .access-badge{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:5px 12px;color:rgba(255,255,255,.8);font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .access-badge:hover{background:rgba(255,255,255,.18)}.access-badge.logged-in{background:rgba(0,180,216,.2);border-color:var(--teal-light);color:var(--teal-light)}
+  .tab-bar{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center}
+  .tab-btn{padding:14px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .tab-btn:hover{color:var(--text)}.tab-btn.active{color:var(--teal);border-bottom-color:var(--teal)}
+  .tab-btn-cta{margin-left:auto;background:var(--teal);color:#fff !important;font-weight:600;border-radius:7px;margin-top:8px;margin-bottom:8px;padding:8px 16px !important;border-bottom:none !important}
+  .tab-btn-cta:hover{background:var(--teal-light) !important}.tab-btn-cta.active{background:var(--teal-light);border-bottom:none !important}
+  .tab-btn-balances{color:#059669;font-weight:600}.tab-btn-balances.active{border-bottom-color:#059669;color:#059669}
+  .tab-pane{display:none;padding:24px}.tab-pane.active{display:block}
+  .players-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+  .player-card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column}
+  .player-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+  .player-img-wrap{background:var(--navy);height:200px;position:relative;overflow:hidden}
+  .player-img-wrap img{width:100%;height:100%;object-fit:cover;object-position:top center}
+  .player-number{position:absolute;top:10px;left:10px;background:var(--teal);color:#fff;font-weight:700;font-size:13px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .player-restricted-badge{position:absolute;top:10px;right:10px;background:rgba(220,38,38,.9);color:#fff;font-size:10px;font-weight:600;padding:3px 7px;border-radius:10px}
+  .player-body{padding:14px;display:flex;flex-direction:column;flex:1}
+  .player-name{font-weight:700;font-size:15px;margin-bottom:2px}.player-position{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+  .player-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+  .tag{font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;border:1px solid}
+  .tag-asa{color:#16a34a;border-color:#bbf7d0;background:#f0fdf4}.tag-photo{color:#92400e;border-color:#fde68a;background:#fffbeb}
+  .tag-nike{color:#111;border-color:#d1d5db;background:#f9fafb}.tag-adidas{color:#1e40af;border-color:#bfdbfe;background:#eff6ff}
+  .balance-section{margin-bottom:10px}
+  .balance-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .balance-label{font-size:12px;color:var(--muted)}.balance-pct{font-size:12px;font-weight:700}
+  .cba-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:2px}
+  .cba-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-light));border-radius:3px;transition:width .4s}
+  .player-actions{display:flex;gap:8px;margin-top:auto;padding-top:12px}
+  .btn-sm{flex:1;padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;border-radius:7px;cursor:pointer;border:none;transition:all .15s;text-align:center}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{border-color:var(--teal);color:var(--teal)}
+  .btn-teal{background:var(--teal);color:#fff}.btn-teal:hover{background:var(--teal-light)}
+  .req-count-badge{background:var(--teal);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;margin-left:4px;font-weight:700}
+  .cal-controls{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+  .cal-title-group{display:flex;align-items:center;gap:14px}.cal-month-title{font-weight:800;font-size:20px}
+  .cal-arrows{display:flex;gap:6px}
+  .cal-arrow{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+  .cal-arrow:hover{border-color:var(--teal);color:var(--teal)}
+  .cal-legend-wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+  .cal-legend-group{display:flex;flex-direction:column;gap:5px}
+  .cal-legend-heading{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .cal-legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+  .ld-available{background:#dcfce7;border:1px solid #86efac}.ld-partial{background:#fef9c3;border:1px solid #fde047}
+  .ld-unavailable{background:#fee2e2;border:1px solid #fca5a5}.ld-cba{background:#ede9fe;border:1px solid #c4b5fd}
+  .ld-booked{background:#dbeafe;border:1px solid #93c5fd}.ld-weekend{background:#f1f5f9;border:1px solid #cbd5e1}
+  .cal-grid-wrap{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+  .cal-dow-header{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
+  .cal-dow{padding:10px 0;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .cal-dow:last-child,.cal-dow:nth-child(6){color:#94a3b8}
+  .cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-day{min-height:88px;padding:6px 7px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);transition:background .12s}
+  .cal-day:nth-child(7n){border-right:none}.cal-day.other-month{opacity:.3;pointer-events:none}
+  .cal-day.today .day-num{background:var(--teal);color:#fff;border-radius:50%}
+  .cal-day.clickable{cursor:pointer}.cal-day.clickable:hover{background:#f0fafb}
+  .day-num{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-bottom:3px}
+  .day-avail-bar{height:4px;border-radius:2px;margin-bottom:4px}
+  .bar-available{background:#4ade80}.bar-partial{background:#facc15}.bar-unavailable{background:#f87171}.bar-cba{background:#a78bfa}.bar-weekend{background:#cbd5e1}
+  .day-avail-text{font-size:10px;color:var(--muted);line-height:1.3;margin-bottom:3px}
+  .day-bookings{display:flex;flex-direction:column;gap:2px}
+  .day-booking-chip{font-size:10px;padding:2px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+  .chip-commercial{background:#dbeafe;color:#1e40af}.chip-retail{background:#dcfce7;color:#15803d}.chip-tbc{background:#f1f5f9;color:#64748b}
+  .requests-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  .filter-select-wrap{position:relative;display:inline-flex;align-items:center}
+  .filter-select{appearance:none;-webkit-appearance:none;padding:8px 32px 8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;color:var(--text);background:#fff;cursor:pointer;transition:all .15s;outline:none;min-width:130px}
+  .filter-select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,138,171,.1)}
+  .filter-select:hover{border-color:var(--teal)}
+  .filter-select-arrow{position:absolute;right:10px;pointer-events:none;color:var(--muted);font-size:13px;line-height:1}
+  .requests-filters-wrap{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  .filter-group{display:flex;flex-direction:column;gap:5px}
+  .filter-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;display:block}
+  .btn-primary{padding:9px 18px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+  .btn-primary:hover{background:var(--teal-light)}
+  .requests-table-wrap{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+  .requests-table{width:100%;border-collapse:collapse}
+  .requests-table th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:11px 16px;text-align:left;border-bottom:1px solid var(--border)}
+  .requests-table td{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13px}
+  .requests-table tr:last-child td{border-bottom:none}.requests-table tr:hover td{background:#f8fafc}
+  .requests-table tr.pending-row td{opacity:.55}
+  .pending-badge{font-size:10px;color:var(--tentative);font-weight:600;display:block;margin-top:2px}
+  .status-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .status-confirmed{background:#f0fdf4;color:var(--confirmed)}.status-tentative{background:#fffbeb;color:var(--tentative)}
+  .status-planned{background:#eff6ff;color:var(--planned)}.status-tbc{background:#f8fafc;color:var(--tbc);border:1px solid var(--border)}
+  .type-chip{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+  .type-commercial{background:#eff6ff;color:#1e40af}.type-retail{background:#f0fdf4;color:#15803d}
+  .player-list-inline{display:flex;flex-wrap:wrap;gap:4px}
+  .player-pill{background:var(--off-white);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px}
+  .action-btns{display:flex;gap:6px}
+  .btn-icon{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s}
+  .btn-icon:hover{border-color:var(--teal);color:var(--teal)}.btn-icon.danger:hover{border-color:var(--red);color:var(--red)}
+  .process-header{margin-bottom:24px}.process-header h2{font-size:22px;font-weight:800;margin-bottom:4px}.process-header p{color:var(--muted)}
+  .streams-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+  @media(max-width:600px){.streams-grid{grid-template-columns:1fr}}
+  .stream-card{background:#fff;border-radius:var(--radius);padding:20px;border:1px solid var(--border)}
+  .stream-title{font-weight:800;font-size:16px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .stream-subtitle{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .stream-icon{width:32px;height:32px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .stream-icon.retail{background:#f0fdf4}
+  .process-step{display:flex;gap:12px;margin-bottom:12px}
+  .step-num{width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1e40af;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .stream-card.retail .step-num{background:#f0fdf4;color:#15803d}
+  .step-title{font-weight:600;font-size:13px}.step-desc{font-size:12px;color:var(--muted);margin-top:2px}
+  .cal-info-card{background:#fff;border-radius:var(--radius);padding:20px;border:1px solid var(--border)}
+  .cal-info-title{font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .cal-info-title .icon{width:28px;height:28px;background:#f0fdf4;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .cal-info-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .cal-info-list li{display:flex;gap:8px;font-size:13px;align-items:flex-start}
+  .cal-info-list li::before{content:"•";color:var(--teal);font-weight:700;flex-shrink:0}
+  .cal-info-note{font-size:12px;color:var(--muted);margin-top:12px}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,42,.55);backdrop-filter:blur(3px);z-index:1000;align-items:center;justify-content:center;padding:20px}
+  .modal-overlay.open{display:flex}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:580px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;animation:modalIn .2s ease}
+  .modal.narrow{max-width:440px}
+  @keyframes modalIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+  .modal-title{font-weight:700;font-size:17px}.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;padding:0 4px;flex-shrink:0}
+  .modal-body{padding:20px 24px}.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+  .pr-empty{text-align:center;padding:32px 20px}.pr-empty-icon{font-size:36px;margin-bottom:10px}.pr-empty-msg{color:var(--muted);font-size:14px}
+  .pr-list{display:flex;flex-direction:column;gap:10px}
+  .pr-item{background:var(--off-white);border-radius:10px;padding:14px 16px;border:1px solid var(--border)}
+  .pr-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .pr-item-name{font-weight:700;font-size:14px}
+  .pr-item-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
+  .pr-item-detail{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px}
+  .day-detail-avail{font-size:14px;font-weight:600;margin-bottom:12px;padding:10px 14px;border-radius:8px}
+  .avail-available{background:#f0fdf4;color:#15803d}.avail-partial{background:#fefce8;color:#854d0e}
+  .avail-unavailable{background:#fef2f2;color:#991b1b}.avail-cba{background:#f5f3ff;color:#6d28d9}.avail-weekend{background:#f8fafc;color:#475569}
+  .day-detail-bookings-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .form-row.full{grid-template-columns:1fr}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .form-control{padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);transition:border-color .15s;background:#fff;width:100%}
+  .form-control:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,138,171,.1)}
+  textarea.form-control{resize:vertical;min-height:80px}
+  .players-checkboxes{display:flex;flex-direction:column;gap:8px}
+  .player-checkbox-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all .15s}
+  .player-checkbox-item:hover{border-color:var(--teal);background:#f0fafb}
+  .player-checkbox-item input[type=checkbox]{accent-color:var(--teal);width:15px;height:15px}
+  .pc-name{font-weight:600;font-size:13px}.pc-meta{font-size:11px;color:var(--muted)}.pc-conflict{font-size:11px;color:var(--red);font-weight:500}
+  .conflict-alert{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:none}
+  .conflict-alert.visible{display:block}
+  .conflict-alert-title{font-weight:700;color:var(--red);font-size:13px;margin-bottom:8px}
+  .conflict-alert-body{font-size:12px;color:#7f1d1d}
+  .conflict-actions{display:flex;gap:8px;margin-top:10px}
+  .btn-conflict{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+  .btn-anyway{background:var(--red);color:#fff}.btn-anyway:hover{opacity:.85}
+  .btn-change{background:#fff;border:1px solid var(--border);color:var(--text)}.btn-change:hover{border-color:var(--teal);color:var(--teal)}
+  .briefed-row{display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:4px}
+  .briefed-row input[type=checkbox]{accent-color:var(--confirmed);width:16px;height:16px;cursor:pointer}
+  .briefed-row label{font-size:13px;font-weight:500;color:#15803d;cursor:pointer}
+  .pin-display{display:flex;justify-content:center;gap:12px;margin:20px 0}
+  .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);transition:all .2s}
+  .pin-dot.filled{background:var(--teal);border-color:var(--teal)}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:220px;margin:0 auto}
+  .pin-key{height:48px;border-radius:10px;border:1px solid var(--border);background:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;transition:all .15s}
+  .pin-key:hover{background:var(--off-white);border-color:var(--teal)}.pin-key.zero{grid-column:2}
+  .pin-error{color:var(--red);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
+  .access-level-info{background:var(--off-white);border-radius:8px;padding:12px;margin-top:14px;font-size:12px;color:var(--muted);line-height:1.6}
+  .access-level-info strong{color:var(--text)}
+  .mreq-wrap{max-width:700px;margin:0 auto}
+  .mreq-header{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+  .mreq-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--teal),var(--teal-light));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+  .mreq-title{font-size:22px;font-weight:800;margin-bottom:3px}.mreq-subtitle{font-size:13px;color:var(--muted)}
+  .mreq-conflict{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px 18px;margin-bottom:20px}
+  .mreq-conflict-title{font-weight:700;color:var(--red);font-size:13px;margin-bottom:8px}
+  .mreq-conflict-body{font-size:12px;color:#7f1d1d;margin-bottom:10px}
+  .mreq-conflict-actions{display:flex;gap:8px}
+  .mreq-form{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:28px;display:flex;flex-direction:column;gap:20px;box-shadow:var(--shadow)}
+  .mreq-row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:560px){.mreq-row{grid-template-columns:1fr}}
+  .mreq-field{display:flex;flex-direction:column;gap:7px}.mreq-field.full{width:100%}
+  .mreq-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text)}
+  .mreq-req{color:var(--red)}.mreq-field-hint{font-size:12px;color:var(--muted);margin-top:-4px}
+  .mreq-input{padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);transition:all .15s;background:#fff;width:100%}
+  .mreq-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,138,171,.1)}
+  .mreq-textarea{resize:vertical;min-height:100px}
+  .mreq-type-toggle{display:flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden}
+  .mreq-type-btn{flex:1;padding:10px 8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;border:none;background:#fff;cursor:pointer;transition:all .15s;color:var(--muted)}
+  .mreq-type-btn:not(:last-child){border-right:1px solid var(--border)}
+  .mreq-type-btn.active{background:var(--navy);color:#fff;font-weight:600}
+  .mreq-date-avail{font-size:12px;margin-top:5px;min-height:18px;font-weight:500}
+  .mreq-date-available{color:var(--confirmed)}.mreq-date-partial{color:#d97706}
+  .mreq-date-unavailable{color:var(--red)}.mreq-date-cba{color:#7c3aed}.mreq-date-weekend{color:var(--muted)}
+  .mreq-routing-note{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;display:none;margin-top:4px}
+  .mreq-routing-note.show{display:block}
+  .mreq-players-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .mreq-player-card{display:flex;flex-direction:column;align-items:center;padding:12px 10px 10px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .18s;background:#fff;text-align:center;position:relative}
+  .mreq-player-card:hover{border-color:var(--teal);background:#f0fafb}
+  .mreq-player-card.selected{border-color:var(--teal);background:#e0f5f9;box-shadow:0 0 0 3px rgba(0,138,171,.12)}
+  .mreq-player-card.conflicted{border-color:#fca5a5;background:#fef2f2}
+  .mreq-player-card input[type=checkbox]{position:absolute;top:8px;right:8px;accent-color:var(--teal);width:15px;height:15px}
+  .mreq-player-photo{width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--navy);margin-bottom:7px;border:2px solid var(--border)}
+  .mreq-player-card.selected .mreq-player-photo{border-color:var(--teal)}
+  .mreq-player-name{font-weight:700;font-size:11px;line-height:1.3;margin-bottom:2px}
+  .mreq-player-pos{font-size:10px;color:var(--muted);margin-bottom:3px}
+  .mreq-player-bal{font-size:10px;font-weight:600;color:var(--teal);margin-bottom:2px}
+  .mreq-player-conflict{font-size:10px;color:var(--red);font-weight:600;margin-top:3px}
+  .mreq-selected-pills{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;padding:4px 0 2px}
+  .mreq-selected-pill{background:var(--navy);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;animation:pillIn .15s ease}
+  @keyframes pillIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+  .mreq-selected-pill button{background:none;border:none;color:rgba(255,255,255,.7);font-size:14px;cursor:pointer;line-height:1;padding:0}
+  .mreq-selected-pill button:hover{color:#fff}
+  .mreq-briefed-row{display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:12px 16px}
+  .mreq-briefed-row input[type=checkbox]{accent-color:var(--confirmed);width:16px;height:16px;cursor:pointer;flex-shrink:0}
+  .mreq-briefed-row label{font-size:13px;font-weight:500;color:#15803d;cursor:pointer;line-height:1.4}
+  .mreq-submit-row{display:flex;justify-content:flex-end;padding-top:4px}
+  .mreq-submit-btn{padding:12px 28px;background:linear-gradient(135deg,var(--teal),var(--teal-light));color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .18s}
+  .mreq-submit-btn:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,138,171,.3)}
+  .mreq-success{text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow)}
+  .mreq-success-icon{font-size:48px;margin-bottom:14px}
+  .mreq-success-title{font-size:22px;font-weight:800;margin-bottom:12px;color:var(--confirmed)}
+  .mreq-success-detail{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.7;max-width:420px;margin-left:auto;margin-right:auto}
+  .mreq-success-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .approval-banner-inner{max-width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;flex-wrap:wrap}
+  #approvalBanner{background:linear-gradient(135deg,#fff7ed,#fef3c7);border-bottom:2px solid var(--tentative);position:sticky;top:98px;z-index:98}
+  .approval-banner-left{display:flex;align-items:center;gap:12px}
+  .approval-banner-icon{width:36px;height:36px;background:var(--tentative);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .approval-banner-title{font-weight:700;font-size:14px;color:#92400e}
+  .approval-banner-sub{font-size:12px;color:#b45309;margin-top:2px}
+  .approval-banner-btn{background:var(--tentative);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .15s;flex-shrink:0}
+  .approval-banner-btn:hover{opacity:.88}
+  .players-tab-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+  .squad-tab-btn{padding:7px 20px;border-radius:20px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--muted);transition:all .18s}
+  .squad-tab-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .squad-tab-btn:hover:not(.active){border-color:var(--teal);color:var(--teal)}
+  .players-balance-stamp{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:7px 14px;box-shadow:var(--shadow)}
+  .players-stamp-label{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
+  .players-stamp-date{border:none;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:600;color:var(--text);background:transparent;outline:none;cursor:pointer}
+  .players-stamp-save{background:var(--teal);border:none;color:#fff;font-family:"DM Sans",sans-serif;font-size:11px;font-weight:600;border-radius:5px;padding:4px 10px;cursor:pointer;transition:opacity .15s}
+  .players-stamp-save:hover{opacity:.85}
+  .balances-wrap{max-width:860px;margin:0 auto}
+  .balances-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
+  .balances-title{font-size:22px;font-weight:800;margin-bottom:4px}
+  .balances-sub{font-size:13px;color:var(--muted)}
+  .balances-stamp-display{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:7px;padding:6px 12px;white-space:nowrap}
+  .balances-squad-block{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+  .balances-squad-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;padding:16px 20px;border-bottom:1px solid var(--border);background:#f8fafc}
+  .balances-squad-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px}
+  .balances-squad-badge.afl{background:#dbeafe;color:#1e40af}
+  .balances-squad-badge.aflw{background:#fce7f3;color:#9d174d}
+  .balances-table-wrap{overflow-x:auto}
+  .balances-table{width:100%;border-collapse:collapse}
+  .balances-table th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border)}
+  .balances-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+  .balances-table tr:last-child td{border-bottom:none}
+  .balances-table tr:hover td{background:#f8fafc}
+  .bal-player-photo{width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:top center;border:1.5px solid var(--border)}
+  .bal-number{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--teal);color:#fff;border-radius:50%;font-size:10px;font-weight:700;flex-shrink:0}
+  .bal-bar-wrap{display:flex;align-items:center;gap:8px}
+  .bal-bar{height:6px;background:var(--border);border-radius:3px;width:80px;overflow:hidden;flex-shrink:0}
+  .bal-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-light));border-radius:3px;transition:width .3s}
+  .bal-input{width:72px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:600;text-align:center;transition:all .15s;-moz-appearance:textfield}
+  .bal-input::-webkit-outer-spin-button,.bal-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .bal-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,138,171,.1)}
+  .bal-input.changed{border-color:var(--tentative);background:#fffbeb}
+  .bal-input.saved{border-color:var(--confirmed);background:#f0fdf4}
+  .bal-pct{font-size:12px;color:var(--muted)}
+  .bal-changed-badge{font-size:10px;font-weight:700;color:var(--tentative);display:none}
+  .bal-changed-badge.show{display:inline}
+  .balances-footer{display:flex;align-items:center;gap:14px;margin-top:20px;padding-top:4px}
+  .balances-footer-note{font-size:12px;color:var(--muted)}
+  .pin-mgmt-wrap{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:24px;margin-top:24px;box-shadow:var(--shadow)}
+  .pin-mgmt-header{margin-bottom:20px}
+  .pin-mgmt-title{font-size:16px;font-weight:700;margin-bottom:4px}
+  .pin-mgmt-sub{font-size:12px;color:var(--muted)}
+  .pin-mgmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:600px){.pin-mgmt-grid{grid-template-columns:1fr}}
+  .pin-mgmt-card{background:var(--off-white);border-radius:10px;padding:18px;border:1px solid var(--border)}
+  .pin-mgmt-card-title{font-weight:700;font-size:13px;margin-bottom:14px}
+  .pin-mgmt-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .hiw-wrap{max-width:860px;margin:0 auto}
+  .hiw-hero{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+  .hiw-hero-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+  .hiw-hero-title{font-size:24px;font-weight:800;margin-bottom:3px}
+  .hiw-hero-sub{font-size:13px;color:var(--muted)}
+  .hiw-notice{display:flex;align-items:center;gap:12px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#991b1b}
+  .hiw-notice-icon{font-size:18px;flex-shrink:0}
+  .hiw-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.hiw-grid{grid-template-columns:1fr}}
+  .hiw-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow);display:flex;gap:14px;align-items:flex-start}
+  .hiw-card-amber{border-left:4px solid var(--tentative)}
+  .hiw-card-teal{border-left:4px solid var(--teal)}
+  .hiw-card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .hiw-card-body{flex:1}
+  .hiw-card-title{font-weight:700;font-size:14px;margin-bottom:7px;color:var(--text)}
+  .hiw-card-text{font-size:13px;color:var(--muted);line-height:1.7}
+  .hiw-access-table{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .hiw-access-row{display:flex;align-items:center;gap:10px;font-size:12px}
+  .hiw-access-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+  .hiw-access-badge.viewer{background:#f8fafc;color:var(--muted);border:1px solid var(--border)}
+  .hiw-access-badge.retail{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+  .hiw-access-badge.commercial{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+  .hiw-access-badge.balance{background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe}
+  .hiw-access-badge.admin{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+  .hiw-access-desc{color:var(--muted);line-height:1.5}
+  .hiw-coming-soon{display:inline-block;font-size:10px;font-weight:700;background:var(--teal);color:#fff;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle;letter-spacing:.3px}
+  .pending-review-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow)}
+  .pending-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+  .pending-review-name{font-weight:800;font-size:16px;color:var(--text)}
+  .pending-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:16px}
+  @media(max-width:500px){.pending-info-grid{grid-template-columns:1fr}}
+  .pending-info-cell{display:flex;flex-direction:column;gap:2px}
+  .pending-info-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .pending-info-val{font-size:13px;color:var(--text);font-weight:500}
+  .pending-comment-wrap{margin-bottom:14px}
+  .pending-comment-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+  .pending-comment-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:"DM Sans",sans-serif;font-size:13px;resize:none;height:64px;transition:border-color .15s;color:var(--text)}
+  .pending-comment-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,138,171,.1)}
+  .pending-action-row{display:flex;gap:10px}
+  .pending-approve-btn2{flex:1;padding:11px 16px;background:var(--confirmed);color:#fff;border:none;border-radius:9px;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .pending-approve-btn2:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 4px 12px rgba(22,163,74,.3)}
+  .pending-deny-btn2{flex:1;padding:11px 16px;background:#fff;color:var(--red);border:2px solid var(--red);border-radius:9px;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .pending-deny-btn2:hover{background:var(--red);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,38,38,.25)}
+  .badge{background:var(--teal);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);transform:translateY(60px);opacity:0;transition:all .25s;z-index:2000}
+  .toast.show{transform:translateY(0);opacity:1}.toast.success{background:var(--confirmed)}.toast.error{background:var(--red)}
+</style>
+</head>
+<body>
+<header class="hub-header">
+  <div class="hub-logo"><div class="hub-logo-icon">&#9889;</div>ASA Player Requests Hub</div>
+  <div class="header-right">
+    <div class="access-badge" id="accessBadge" onclick="openPinModal()">&#128274; <span id="accessLabel">Sign in</span></div>
+  </div>
+</header>
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="players" onclick="switchTab('players',this)">&#128100; Players</button>
+  <button class="tab-btn" data-tab="calendar" onclick="switchTab('calendar',this)">&#128197; Calendar</button>
+  <button class="tab-btn" data-tab="requests" onclick="switchTab('requests',this)">&#128203; Requests <span class="badge" id="requestCount">-</span></button>
+  <button class="tab-btn" data-tab="process" onclick="switchTab('process',this)">&#128214; Process</button>
+  <button class="tab-btn tab-btn-balances" id="balancesTabBtn" data-tab="balances" onclick="switchTab('balances',this)" style="display:none">&#9997;&#65039; Balances</button>
+  <button class="tab-btn" data-tab="how-it-works" onclick="switchTab('how-it-works',this)">&#128214; How It Works</button>
+  <button class="tab-btn tab-btn-cta" data-tab="make-request" onclick="switchTab('make-request',this)">&#43; New Request</button>
+</nav>
+<div id="approvalBanner" style="display:none">
+  <div class="approval-banner-inner">
+    <div class="approval-banner-left">
+      <div class="approval-banner-icon">&#9203;</div>
+      <div>
+        <div class="approval-banner-title" id="approvalBannerTitle">You have pending requests awaiting approval</div>
+        <div class="approval-banner-sub" id="approvalBannerSub"></div>
+      </div>
+    </div>
+    <button class="approval-banner-btn" onclick="openPendingModal()">Review &amp; Approve &#8594;</button>
+  </div>
+</div>
+<div class="tab-pane active" id="tab-players">
+  <div class="players-tab-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="squad-tab-btn active" id="sqBtn-afl" onclick="switchSquad('afl',this)">AFL</button>
+      <button class="squad-tab-btn" id="sqBtn-aflw" onclick="switchSquad('aflw',this)">AFLW</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="players-balance-stamp">
+        <span class="players-stamp-label">Balance last updated</span>
+        <input type="date" class="players-stamp-date" id="stampDate">
+        <button class="players-stamp-save" onclick="saveStamp()">Save</button>
+      </div>
+      <button class="btn-primary" id="addPlayerBtn" onclick="openAddPlayerModal()" style="display:none">&#43; Add Player</button>
+    </div>
+  </div>
+  <div id="playersGrid" class="players-grid"></div>
+</div>
+<div class="tab-pane" id="tab-calendar">
+  <div class="cal-controls">
+    <div class="cal-title-group">
+      <div class="cal-arrows"><button class="cal-arrow" onclick="calNav(-1)">&#8592;</button><button class="cal-arrow" onclick="calNav(1)">&#8594;</button></div>
+      <div class="cal-month-title" id="calMonthTitle"></div>
+    </div>
+    <div class="cal-legend-wrap">
+      <div class="cal-legend-group">
+        <span class="cal-legend-heading">Player Availability</span>
+        <div class="cal-legend">
+          <div class="legend-item"><div class="legend-dot ld-available"></div>Available</div>
+          <div class="legend-item"><div class="legend-dot ld-partial"></div>Partial</div>
+          <div class="legend-item"><div class="legend-dot ld-unavailable"></div>Not Available</div>
+          <div class="legend-item"><div class="legend-dot ld-cba"></div>CBA Booked</div>
+          <div class="legend-item"><div class="legend-dot ld-weekend"></div>Weekend</div>
+        </div>
+      </div>
+      <div class="cal-legend-group">
+        <span class="cal-legend-heading">Requests</span>
+        <div class="cal-legend">
+          <div class="legend-item"><div class="legend-dot ld-booked" style="background:#dbeafe;border-color:#93c5fd"></div>Commercial</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#dcfce7;border:1px solid #86efac"></div>Retail</div>
+          <div class="legend-item"><div class="legend-dot ld-weekend"></div>TBC</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cal-grid-wrap">
+    <div class="cal-dow-header"><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div><div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div><div class="cal-dow">Sun</div></div>
+    <div class="cal-days" id="calDays"></div>
+  </div>
+</div>
+<div class="tab-pane" id="tab-requests">
+  <div class="requests-toolbar">
+    <div class="requests-filters-wrap">
+      <div class="filter-group"><label class="filter-group-label" for="filterDeptSel">Department</label><div class="filter-select-wrap"><select class="filter-select" id="filterDeptSel" onchange="setFilterDrop('dept',this.value)"><option value="all">All</option><option value="Retail">&#128717; Retail</option><option value="Commercial">&#128188; Commercial</option></select><span class="filter-select-arrow">&#8964;</span></div></div>
+      <div class="filter-group"><label class="filter-group-label" for="filterStatusSel">Status</label><div class="filter-select-wrap"><select class="filter-select" id="filterStatusSel" onchange="setFilterDrop('status',this.value)"><option value="all">All Statuses</option><option value="Confirmed">Confirmed</option><option value="Tentative">Tentative</option><option value="TBC">TBC</option></select><span class="filter-select-arrow">&#8964;</span></div></div>
+      <div class="filter-group"><label class="filter-group-label" for="filterTimeSel">Time</label><div class="filter-select-wrap"><select class="filter-select" id="filterTimeSel" onchange="setFilterDrop('time',this.value)"><option value="active">Active</option><option value="past">Past</option><option value="all">All Time</option></select><span class="filter-select-arrow">&#8964;</span></div></div>
+    </div>
+  </div>
+  <div class="requests-table-wrap"><table class="requests-table"><thead><tr><th>Name</th><th>Type</th><th>Date</th><th>Players</th><th>Location</th><th>Time</th><th>Status</th><th></th></tr></thead><tbody id="requestsTbody"></tbody></table></div>
+</div>
+<div class="tab-pane" id="tab-process">
+  <div class="process-header"><h2>Request Process</h2><p>Two distinct workflows for managing retail and commercial player requests</p></div>
+  <div class="streams-grid">
+    <div class="stream-card retail"><div class="stream-title"><div class="stream-icon retail">&#128717;</div>Stream 1</div><div class="stream-subtitle">Consumer / Retail ASA Requests</div><div class="process-step"><div class="step-num">1</div><div><div class="step-title">Identify the need</div><div class="step-desc">Marketing or retail identifies a player requirement</div></div></div><div class="process-step"><div class="step-num">2</div><div><div class="step-title">Submit request to Georgie</div><div class="step-desc">Player(s), date, location, purpose, brief</div></div></div><div class="process-step"><div class="step-num">3</div><div><div class="step-title">Check Player Appearance calendar</div><div class="step-desc">Review Outlook Draft/Pending entries</div></div></div><div class="process-step"><div class="step-num">4</div><div><div class="step-title">Pass to Trent</div><div class="step-desc">Confirmed details passed for player liaison</div></div></div><div class="process-step"><div class="step-num">5</div><div><div class="step-title">Confirm and log to calendar</div></div></div></div>
+    <div class="stream-card"><div class="stream-title"><div class="stream-icon">&#128188;</div>Stream 2</div><div class="stream-subtitle">Commercial ASA Requests</div><div class="process-step"><div class="step-num">1</div><div><div class="step-title">Partner identifies need</div></div></div><div class="process-step"><div class="step-num">2</div><div><div class="step-title">Submit to Jodie or John</div><div class="step-desc">Full brief with partner, players, date, location</div></div></div><div class="process-step"><div class="step-num">3</div><div><div class="step-title">Check availability and pass to Trent</div></div></div><div class="process-step"><div class="step-num">4</div><div><div class="step-title">Confirm and log to calendar</div></div></div></div>
+  </div>
+  <div class="cal-info-card"><div class="cal-info-title"><div class="icon">&#128197;</div>Player Appearance Calendar</div><ul class="cal-info-list"><li><strong>Draft entries:</strong> Requests under review or awaiting player confirmation</li><li><strong>Pending entries:</strong> Confirmed with players but awaiting final logistics</li><li><strong>Confirmed entries:</strong> Fully approved shoots with locked-in details</li></ul><div class="cal-info-note">Review the calendar before submitting new requests to avoid scheduling conflicts and ensure player availability.</div></div>
+</div>
+<div class="tab-pane" id="tab-balances">
+  <div class="balances-wrap">
+    <div class="balances-header"><div><h2 class="balances-title">&#9997;&#65039; Update ASA / CBA Balances</h2><p class="balances-sub">Edit all player balances in one place. Changes are saved to the board when you click Save All.</p></div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div class="balances-stamp-display">Last updated: <strong id="balancesStampDisplay">&#8212;</strong></div><button class="btn-primary" onclick="saveAllBalances()">&#128190; Save All to Board</button></div></div>
+    <div class="balances-squads">
+      <div class="balances-squad-block"><div class="balances-squad-title"><span class="balances-squad-badge afl">AFL</span>AFL Players</div><div class="balances-table-wrap"><table class="balances-table"><thead><tr><th></th><th>Player</th><th>ASA Type</th><th>Current Balance</th><th>New Balance %</th><th></th></tr></thead><tbody id="balancesAFLBody"></tbody></table></div></div>
+      <div class="balances-squad-block" style="margin-top:28px"><div class="balances-squad-title"><span class="balances-squad-badge aflw">AFLW</span>AFLW Players</div><div class="balances-table-wrap"><table class="balances-table"><thead><tr><th></th><th>Player</th><th>ASA Type</th><th>Current Balance</th><th>New Balance %</th><th></th></tr></thead><tbody id="balancesAFLWBody"></tbody></table></div></div>
+    </div>
+    <div class="balances-footer"><button class="btn-primary" onclick="saveAllBalances()">&#128190; Save All to Board</button><span class="balances-footer-note" id="balancesSaveStatus"></span></div>
+    <div class="pin-mgmt-wrap">
+      
+<div class="pin-mgmt-header"><div class="pin-mgmt-title">&#128272; PIN Management</div><div class="pin-mgmt-sub">Update access PINs. Admin PIN requires current PIN to change.</div></div>
+      <div class="pin-mgmt-grid">
+        <div class="pin-mgmt-card"><div class="pin-mgmt-card-title">&#128308; Admin PIN</div><div class="pin-mgmt-fields"><div class="form-group"><label class="form-label">Current PIN</label><input type="password" class="form-control" id="adminPinCurrent" maxlength="8" placeholder="Current PIN"></div><div class="form-group"><label class="form-label">New PIN</label><input type="password" class="form-control" id="adminPinNew" maxlength="8" placeholder="New PIN"></div><div class="form-group"><label class="form-label">Confirm</label><input type="password" class="form-control" id="adminPinConfirm" maxlength="8" placeholder="Confirm PIN"></div></div><button class="btn-primary" style="margin-top:10px;width:100%" onclick="updateAdminPin()">Update Admin PIN</button></div>
+        <div class="pin-mgmt-card"><div class="pin-mgmt-card-title">&#128993; Retail Approver PIN</div><div class="pin-mgmt-fields" style="grid-template-columns:1fr 1fr"><div class="form-group"><label class="form-label">New PIN</label><input type="password" class="form-control" id="retailPinNew" maxlength="8" placeholder="New PIN"></div><div class="form-group"><label class="form-label">Confirm</label><input type="password" class="form-control" id="retailPinConfirm" maxlength="8" placeholder="Confirm PIN"></div></div><button class="btn-primary" style="margin-top:10px;width:100%" onclick="updateRolePin('retail-approver','retailPinNew','retailPinConfirm')">Update Retail PIN</button></div>
+        <div class="pin-mgmt-card" style="margin-top:12px"><div class="pin-mgmt-card-title">&#128994; Commercial Approver PIN</div><div class="pin-mgmt-fields" style="grid-template-columns:1fr 1fr"><div class="form-group"><label class="form-label">New PIN</label><input type="password" class="form-control" id="commPinNew" maxlength="8" placeholder="New PIN"></div><div class="form-group"><label class="form-label">Confirm</label><input type="password" class="form-control" id="commPinConfirm" maxlength="8" placeholder="Confirm PIN"></div></div><button class="btn-primary" style="margin-top:10px;width:100%" onclick="updateRolePin('commercial-approver','commPinNew','commPinConfirm')">Update Commercial PIN</button></div>
+        <div class="pin-mgmt-card" style="margin-top:12px"><div class="pin-mgmt-card-title">&#129695; Balance Updater PIN</div><div class="pin-mgmt-fields" style="grid-template-columns:1fr 1fr"><div class="form-group"><label class="form-label">New PIN</label><input type="password" class="form-control" id="balPinNew" maxlength="8" placeholder="New PIN"></div><div class="form-group"><label class="form-label">Confirm</label><input type="password" class="form-control" id="balPinConfirm" maxlength="8" placeholder="Confirm PIN"></div></div><button class="btn-primary" style="margin-top:10px;width:100%" onclick="updateRolePin('balance-updater','balPinNew','balPinConfirm')">Update Balance Updater PIN</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="tab-pane" id="tab-how-it-works">
+  <div class="hiw-wrap">
+    <div class="hiw-hero"><div class="hiw-hero-icon">&#128203;</div><div><h2 class="hiw-hero-title">ASA / CBA Player Requests Hub</h2><p class="hiw-hero-sub">Internal use only &mdash; Port Adelaide Football Club</p></div></div>
+    <div class="hiw-notice"><span class="hiw-notice-icon">&#128274;</span><strong>Internal Use Only.</strong> This portal is strictly for internal PAFC staff. Do not share access or request information outside the organisation.</div>
+    <div class="hiw-grid">
+      <div class="hiw-card"><div class="hiw-card-icon" style="background:#eff6ff">&#129295;</div><div class="hiw-card-body"><div class="hiw-card-title">What is this hub?</div><div class="hiw-card-text">The ASA / CBA Player Requests Hub is a centralised portal for managing AFL and AFLW player appearance requests across Retail and Commercial streams. It tracks player availability, ASA/CBA balance usage, request status, and approval workflows &mdash; all in one place and synced live with the team&rsquo;s monday.com board.</div></div></div>
+      <div class="hiw-card hiw-card-amber"><div class="hiw-card-icon" style="background:#fef3c7">&#9888;&#65039;</div><div class="hiw-card-body"><div class="hiw-card-title">Briefing Trent</div><div class="hiw-card-text">Trent must still be briefed <strong>individually and directly via email</strong> for every confirmed appearance &mdash; this portal does not automatically notify him. Once a request is approved and confirmed, the relevant approver is responsible for following up with Trent outside of this system. The &ldquo;Briefed to Trent&rdquo; checkbox is a manual record only.</div></div></div>
+      <div class="hiw-card"><div class="hiw-card-icon" style="background:#f0fdf4">&#9997;&#65039;</div><div class="hiw-card-body"><div class="hiw-card-title">ASA Balance Updates</div><div class="hiw-card-text"><strong>Jacob</strong> is responsible for keeping player ASA/CBA balances up to date. He has a dedicated Balance Updater access PIN which gives him direct access to the Balances tab to update all player percentages and sync them to the board. If you believe a balance is incorrect, please contact Jacob directly.</div></div></div>
+      <div class="hiw-card"><div class="hiw-card-icon" style="background:#f5f3ff">&#128272;</div><div class="hiw-card-body"><div class="hiw-card-title">Access Levels</div><div class="hiw-card-text">Anyone can open and view this hub &mdash; no login required to browse. Different actions are unlocked based on your access level:</div><div class="hiw-access-table"><div class="hiw-access-row"><span class="hiw-access-badge viewer">&#9898; Viewer</span><span class="hiw-access-desc">Browse players, calendar and approved requests. No login needed.</span></div><div class="hiw-access-row"><span class="hiw-access-badge retail">&#128993; Retail Approver</span><span class="hiw-access-desc">View, approve and deny Retail ASA requests.</span></div><div class="hiw-access-row"><span class="hiw-access-badge commercial">&#128994; Commercial Approver</span><span class="hiw-access-desc">View, approve and deny Commercial ASA requests.</span></div><div class="hiw-access-row"><span class="hiw-access-badge balance">&#129695; Balance Updater</span><span class="hiw-access-desc">Update player ASA/CBA balance percentages (Jacob).</span></div><div class="hiw-access-row"><span class="hiw-access-badge admin">&#128308; Admin</span><span class="hiw-access-desc">Full access &mdash; manage players, edit requests, manage PINs.</span></div></div></div></div>
+      <div class="hiw-card"><div class="hiw-card-icon" style="background:#fdf0ff">&#9993;&#65039;</div><div class="hiw-card-body"><div class="hiw-card-title">How to Submit a Request</div><div class="hiw-card-text">Click <strong>+ New Request</strong> in the top navigation. Fill in the request name, type (Retail or Commercial), date, location, time required, players and any relevant notes. Once submitted, the request is automatically routed to the relevant approver and added to the monday.com board. Unapproved requests are only visible to approvers and admins.</div></div></div>
+      <div class="hiw-card"><div class="hiw-card-icon" style="background:#f0fdf4">&#9989;</div><div class="hiw-card-body"><div class="hiw-card-title">Approval Process</div><div class="hiw-card-text">When a new request is submitted, the relevant approver will see an amber banner at the top of the hub prompting them to review. Clicking <strong>Review &amp; Approve</strong> opens a summary of all pending requests with Approve and Deny buttons and an optional comment field. Approved requests become visible to all viewers and are updated on the monday.com board in real time.</div></div></div>
+      <div class="hiw-card hiw-card-teal"><div class="hiw-card-icon" style="background:#e0f5f9">&#128276;</div><div class="hiw-card-body"><div class="hiw-card-title">Email Notifications <span class="hiw-coming-soon">Coming Soon</span></div><div class="hiw-card-text">We are currently working on an automated email notification system so that approvers are notified directly via Outlook when a new request comes through for their stream. In the meantime, approvers should check the hub regularly or will be notified via monday.com bell notifications when a new request is submitted.</div></div></div>
+      <div class="hiw-card"><div class="hiw-card-icon" style="background:#f8fafc">&#128203;</div><div class="hiw-card-body"><div class="hiw-card-title">monday.com Board Sync</div><div class="hiw-card-text">All changes made in this hub &mdash; new requests, approvals, balance updates, player edits &mdash; are synced live to the <strong>ASA / CBA HUB</strong> board on monday.com. This means the board always reflects the current state of the hub and can be used as a source of truth for reporting or auditing.</div></div></div>
+    </div>
+  </div>
+</div>
+<div class="tab-pane" id="tab-make-request">
+  <div class="mreq-wrap">
+    <div class="mreq-header"><div class="mreq-icon">&#9993;</div><div><h2 class="mreq-title">Make a Request</h2><p class="mreq-subtitle">Submit a new player appearance request. It will be sent to the relevant approver based on request type.</p></div></div>
+    <div id="mreq-conflict" class="mreq-conflict" style="display:none"><div class="mreq-conflict-title">&#9888;&#65039; Availability Conflict Detected</div><div id="mreq-conflict-body" class="mreq-conflict-body"></div><div class="mreq-conflict-actions"><button class="btn-conflict btn-anyway" onclick="mreqIgnoreConflict()">Book anyway</button><button class="btn-conflict btn-change" onclick="document.getElementById('mreq-conflict').style.display='none'">Change details</button></div></div>
+    <div class="mreq-form" id="mreqForm">
+      <div class="mreq-field full"><label class="mreq-label">Request Name <span class="mreq-req">*</span></label><input type="text" class="mreq-input" id="mreq-name" placeholder="e.g. MG Campaign Shoot"></div>
+      <div class="mreq-row">
+        <div class="mreq-field"><label class="mreq-label">Request Type <span class="mreq-req">*</span></label><div class="mreq-type-toggle"><button class="mreq-type-btn active" data-val="Retail" onclick="selectMreqType(this)">&#128717; Retail</button><button class="mreq-type-btn" data-val="Commercial" onclick="selectMreqType(this)">&#128188; Commercial</button></div><div class="mreq-routing-note" id="mreqRoutingNote"></div></div>
+        <div class="mreq-field"><label class="mreq-label">Date <span class="mreq-req">*</span></label><input type="date" class="mreq-input" id="mreq-date" onchange="mreqCheckConflicts()"><div class="mreq-date-avail" id="mreqDateAvail"></div></div>
+      </div>
+      <div class="mreq-field full"><label class="mreq-label">Location</label><input type="text" class="mreq-input" id="mreq-location" placeholder="e.g. Alberton Oval"></div>
+      <div class="mreq-field full"><label class="mreq-label">Time Required</label><input type="text" class="mreq-input" id="mreq-time" placeholder="e.g. 2 hours, Half day, 90 mins"></div>
+      <div class="mreq-field full"><label class="mreq-label">Player(s) Requested <span class="mreq-req">*</span></label><p class="mreq-field-hint">Select one or more. Conflicts with existing bookings will be flagged.</p><div class="mreq-players-grid" id="mreqPlayersGrid"></div><div class="mreq-selected-pills" id="mreqSelectedPills"></div></div>
+      <div class="mreq-row">
+        <div class="mreq-field"><label class="mreq-label">Status</label><select class="mreq-input" id="mreq-status" onchange="mreqStatusChanged()"><option value="TBC">TBC</option><option value="Tentative">Tentative</option><option value="Planned">Planned</option><option value="Confirmed">Confirmed</option></select></div>
+        <div class="mreq-field"><label class="mreq-label">Your Name</label><input type="text" class="mreq-input" id="mreq-submitter" placeholder="e.g. Jane Smith"></div>
+      </div>
+      <div id="mreqBriefedWrap" style="display:none"><div class="mreq-briefed-row"><input type="checkbox" id="mreq-briefed"><label for="mreq-briefed">Briefed to Trent &amp; Approved</label></div></div>
+      <div class="mreq-field full"><label class="mreq-label">Brief / Notes</label><textarea class="mreq-input mreq-textarea" id="mreq-notes" placeholder="Purpose, what is needed, any key details..."></textarea></div>
+      <div class="mreq-submit-row"><button class="mreq-submit-btn" onclick="submitMakeRequest()">Submit Request &#8594;</button></div>
+    </div>
+    <div class="mreq-success" id="mreqSuccess" style="display:none">
+      <div class="mreq-success-icon">&#9989;</div>
+      <h3 class="mreq-success-title">Request Submitted!</h3>
+      <div class="mreq-success-detail" id="mreqSuccessDetail"></div>
+      <div class="mreq-success-actions"><button class="mreq-submit-btn" onclick="mreqReset()">Submit Another</button><button class="btn-sm btn-outline" style="padding:10px 20px;font-size:14px" onclick="switchTab('requests',null)">View All Requests</button></div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="playerRequestsModal"><div class="modal narrow"><div class="modal-header"><div><div class="modal-title" id="prModalTitle"></div><div style="font-size:12px;color:var(--muted);margin-top:3px" id="prModalSub"></div></div><button class="modal-close" onclick="closeModal('playerRequestsModal')">&#215;</button></div><div class="modal-body" id="prModalBody"></div><div class="modal-footer"><button class="btn-primary" id="prNewBtn">+ New Request</button></div></div></div>
+<div class="modal-overlay" id="dayDetailModal"><div class="modal narrow"><div class="modal-header"><div class="modal-title" id="dayDetailTitle"></div><button class="modal-close" onclick="closeModal('dayDetailModal')">&#215;</button></div><div class="modal-body" id="dayDetailBody"></div><div class="modal-footer"><button class="btn-primary" id="dayNewReqBtn">+ New Request for this day</button></div></div></div>
+<div class="modal-overlay" id="balanceModal">
+  <div class="modal"><div class="modal-header"><div><div class="modal-title" id="balModalTitle">Edit Player</div><div style="font-size:12px;color:var(--muted);margin-top:3px" id="balModalSub"></div></div><button class="modal-close" onclick="closeModal('balanceModal')">&#215;</button></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label class="form-label">Full Name <span style="color:var(--red)">*</span></label><input type="text" class="form-control" id="ep-name"></div><div class="form-group"><label class="form-label">Player Number</label><input type="number" class="form-control" id="ep-number" min="1" max="99"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Position</label><select class="form-control" id="ep-position"><option>Midfielder</option><option>Key Forward</option><option>Forward</option><option>Key Defender</option><option>Defender</option><option>Ruck</option></select></div><div class="form-group"><label class="form-label">ASA Type</label><select class="form-control" id="ep-asa"><option value="Full ASA">Full ASA</option><option value="Photo Usage Only">Photo Usage Only</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">ASA / CBA Balance (%)</label><input type="number" class="form-control" id="ep-balance" min="0" max="100"></div><div class="form-group"><label class="form-label">Sponsor</label><select class="form-control" id="ep-sponsor"><option value="None">None</option><option value="Nike">Nike</option><option value="Adidas">Adidas</option></select></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Photo URL</label><input type="text" class="form-control" id="ep-photo" placeholder="https://..."></div></div>
+    <div class="form-row full"><div class="form-group full" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="ep-restricted" style="accent-color:var(--teal);width:16px;height:16px;cursor:pointer"><label for="ep-restricted" style="font-size:13px;font-weight:500;cursor:pointer">Restricted (Alberton Only / Photo Usage)</label></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn-sm btn-outline" onclick="closeModal('balanceModal')">Cancel</button><button class="btn-primary" onclick="saveBalances()">&#128190; Save Changes</button></div></div>
+</div>
+<div class="modal-overlay" id="requestModal">
+  <div class="modal"><div class="modal-header"><div class="modal-title" id="requestModalTitle">New Request</div><button class="modal-close" onclick="closeModal('requestModal')">&#215;</button></div>
+  <div class="modal-body">
+    <div id="conflictAlert" class="conflict-alert"><div class="conflict-alert-title">&#9888;&#65039; Booking Conflict Detected</div><div class="conflict-alert-body" id="conflictAlertBody"></div><div class="conflict-actions"><button class="btn-conflict btn-anyway" onclick="ignoreConflict=true;document.getElementById('conflictAlert').classList.remove('visible')">Book anyway</button><button class="btn-conflict btn-change" onclick="document.getElementById('conflictAlert').classList.remove('visible')">Change details</button><button class="btn-conflict btn-change" onclick="closeModal('requestModal')">Cancel</button></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Request Name</label><input type="text" class="form-control" id="f-name" placeholder="e.g. MG Campaign Shoot"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Type</label><select class="form-control" id="f-type"><option>Retail</option><option>Commercial</option></select></div><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-control" id="f-date" onchange="checkConflicts()"></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Location</label><input type="text" class="form-control" id="f-location"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Time Required</label><input type="text" class="form-control" id="f-time" placeholder="e.g. 2 hours, Half day, 90 mins"></div></div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">Players</label><div class="players-checkboxes" id="playersCheckboxes"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Status</label><select class="form-control" id="f-status" onchange="toggleModalBriefed('f-briefed-wrap',this.value)"><option>TBC</option><option>Tentative</option><option>Planned</option><option>Confirmed</option></select></div><div class="form-group"><label class="form-label">Requested By</label><input type="text" class="form-control" id="f-submitter" placeholder="Your name"></div></div>
+    <div id="f-briefed-wrap" style="display:none;margin-bottom:14px"><div class="briefed-row"><input type="checkbox" id="f-briefed"><label for="f-briefed">Briefed to Trent &amp; Approved</label></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Notes</label><textarea class="form-control" id="f-notes"></textarea></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn-sm btn-outline" onclick="closeModal('requestModal')">Cancel</button><button class="btn-primary" onclick="saveRequest()">&#128190; Save Request</button></div></div>
+</div>
+<div class="modal-overlay" id="editModal">
+  <div class="modal"><div class="modal-header"><div class="modal-title">Edit Request</div><button class="modal-close" onclick="closeModal('editModal')">&#215;</button></div>
+  <div class="modal-body">
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Request Name</label><input type="text" class="form-control" id="ef-name"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Type</label><select class="form-control" id="ef-type"><option>Retail</option><option>Commercial</option></select></div><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-control" id="ef-date"></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Location</label><input type="text" class="form-control" id="ef-location"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Time Required</label><input type="text" class="form-control" id="ef-time" placeholder="e.g. 2 hours, Half day, 90 mins"></div></div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">Players</label><div class="players-checkboxes" id="editPlayersCheckboxes"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Status</label><select class="form-control" id="ef-status" onchange="toggleModalBriefed('ef-briefed-wrap',this.value)"><option>TBC</option><option>Tentative</option><option>Planned</option><option>Confirmed</option></select></div></div>
+    <div id="ef-briefed-wrap" style="display:none;margin-bottom:14px"><div class="briefed-row"><input type="checkbox" id="ef-briefed"><label for="ef-briefed">Briefed to Trent &amp; Approved</label></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Notes</label><textarea class="form-control" id="ef-notes"></textarea></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn-sm btn-outline" onclick="closeModal('editModal')">Cancel</button><button class="btn-primary" onclick="saveEdit()">&#128190; Save Changes</button></div></div>
+</div>
+<div class="modal-overlay" id="pinModal">
+  <div class="modal" style="max-width:340px"><div class="modal-header"><div class="modal-title">&#128272; Approver Access</div><button class="modal-close" onclick="closeModal('pinModal')">&#215;</button></div>
+  <div class="modal-body">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Enter your PIN to access approver features.</p>
+    <div class="pin-display"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinPress('1')">1</button><button class="pin-key" onclick="pinPress('2')">2</button><button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button><button class="pin-key" onclick="pinPress('5')">5</button><button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button><button class="pin-key" onclick="pinPress('8')">8</button><button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key" onclick="pinClear()" style="font-size:12px">&#9003;</button><button class="pin-key zero" onclick="pinPress('0')">0</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="access-level-info"><strong>Access levels:</strong><br>&#128308; <strong>Admin</strong> - Full access, manage players<br>&#128993; <strong>Retail Approver</strong> - Approve retail requests<br>&#128994; <strong>Commercial Approver</strong> - Approve commercial requests<br>&#129695; <strong>Balance Updater</strong> - Update player ASA/CBA balances<br>&#9898; <strong>Viewer</strong> - Read-only (no login required)</div>
+  </div></div>
+</div>
+<div class="modal-overlay" id="addPlayerModal">
+  <div class="modal"><div class="modal-header"><div class="modal-title">&#128100; Add New Player</div><button class="modal-close" onclick="closeModal('addPlayerModal')">&#215;</button></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label class="form-label">Full Name <span style="color:var(--red)">*</span></label><input type="text" class="form-control" id="ap-name" placeholder="e.g. Joel Amartey"></div><div class="form-group"><label class="form-label">Player Number <span style="color:var(--red)">*</span></label><input type="number" class="form-control" id="ap-number" placeholder="e.g. 22" min="1" max="99"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Position <span style="color:var(--red)">*</span></label><select class="form-control" id="ap-position"><option value="">Select position...</option><option>Midfielder</option><option>Key Forward</option><option>Forward</option><option>Key Defender</option><option>Defender</option><option>Ruck</option></select></div><div class="form-group"><label class="form-label">ASA Type</label><select class="form-control" id="ap-asa"><option value="Full ASA">Full ASA</option><option value="Photo Usage Only">Photo Usage Only</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">ASA / CBA Balance (%)</label><input type="number" class="form-control" id="ap-balance" value="50" min="0" max="100"></div><div class="form-group"><label class="form-label">Sponsor</label><select class="form-control" id="ap-sponsor"><option value="None">None</option><option value="Nike">Nike</option><option value="Adidas">Adidas</option></select></div></div>
+    <div class="form-row full"><div class="form-group full"><label class="form-label">Photo URL</label><input type="text" class="form-control" id="ap-photo" placeholder="https://..."></div></div>
+    <div class="form-row full"><div class="form-group full" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="ap-restricted" style="accent-color:var(--teal);width:16px;height:16px"><label for="ap-restricted" style="font-size:13px;font-weight:500;cursor:pointer">Restricted (Alberton Only / Photo Usage)</label></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn-sm btn-outline" onclick="closeModal('addPlayerModal')">Cancel</button><button class="btn-primary" onclick="saveNewPlayer()">&#128190; Add Player</button></div></div>
+</div>
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header" style="border-bottom:none;padding-bottom:8px"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">&#128465;</div><div><div class="modal-title" id="confirmTitle">Delete Request</div><div style="font-size:13px;color:var(--muted);margin-top:2px" id="confirmSubtitle"></div></div></div><button class="modal-close" onclick="closeModal('confirmModal')">&#215;</button></div>
+    <div class="modal-body" style="padding-top:4px"><p style="font-size:14px;color:var(--text)" id="confirmMessage">Are you sure you want to delete this request? This cannot be undone.</p></div>
+    <div class="modal-footer"><button class="btn-sm btn-outline" onclick="closeModal('confirmModal')" style="flex:none;padding:8px 18px">Cancel</button><button class="btn-sm" id="confirmOkBtn" style="flex:none;padding:8px 18px;background:var(--red);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Delete</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="pendingModal">
+  <div class="modal" style="max-width:680px"><div class="modal-header"><div><div class="modal-title">&#9203; Pending Approvals</div><div style="font-size:12px;color:var(--muted);margin-top:3px" id="pendingModalSub"></div></div><button class="modal-close" onclick="closeModal('pendingModal')">&#215;</button></div>
+  <div class="modal-body" id="pendingModalBody"></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const players=[
+  {id:"p1",name:"Ollie Wines",        num:"16",pos:"Midfielder",  asa:"Full ASA",        bal:49, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556800/Ollie%20Wines.png"},
+  {id:"p2",name:"Todd Marshall",      num:"4", pos:"Key Defender",asa:"Full ASA",        bal:35, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556636/Todd%20Marshall.png"},
+  {id:"p3",name:"Miles Bergman",      num:"14",pos:"Defender",    asa:"Full ASA",        bal:65, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556459/Miles%20Bergman.webp"},
+  {id:"p4",name:"Sam Powell-Pepper",  num:"2", pos:"Forward",     asa:"Full ASA",        bal:40, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556290/Sam%20Powell-Pepper.webp"},
+  {id:"p5",name:"Zak Butters",        num:"9", pos:"Midfielder",  asa:"Full ASA",        bal:28, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946551494/Zak%20Butters.png"},
+  {id:"p6",name:"Connor Rozee",       num:"1", pos:"Midfielder",  asa:"Full ASA",        bal:40, restricted:false,sponsor:"Nike",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2943074325/Connor%20Rozee.png"},
+  {id:"p7",name:"Jason Horne-Francis",num:"18",pos:"Midfielder",  asa:"Full ASA",        bal:50, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556909/Jason%20Horne-Francis.png"},
+  {id:"p8",name:"Aliir Aliir",        num:"21",pos:"Key Defender",asa:"Photo Usage Only",bal:50, restricted:true, sponsor:"Nike",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946558097/Alirr%20Aliir.png"},
+  {id:"p9",name:"Mitch Georgiades",   num:"19",pos:"Key Forward", asa:"Photo Usage Only",bal:21, restricted:true, sponsor:"Adidas",img:"https://pafc-team.monday.com/protected_static/709276/resources/2946558266/Mitch%20Georgiades.png"}
+];
+let requests=[
+  {id:"r1",name:"MG Campaign",             type:"Commercial",date:"2026-05-04",players:["p3","p4"],location:"Adelaide Studio",                status:"Confirmed",approved:true, briefed:true, time_required:"2 hours",notes:""},
+  {id:"r2",name:"SDNR Guernsey Shoot",      type:"Retail",    date:"2026-05-04",players:[],         location:"Alberton Oval",                  status:"Planned",  approved:true, briefed:false,notes:""},
+  {id:"r3",name:"Health Partners",          type:"Commercial",date:"2026-05-26",players:["p5","p4","p6"],location:"Health Partners Studio",     status:"Confirmed",approved:true, briefed:true, notes:""},
+  {id:"r4",name:"Australian Outdoor Living",type:"Commercial",date:"2026-05-04",players:["p6"],     location:"Adelaide Showgrounds",           status:"Confirmed",approved:true, briefed:true, notes:""},
+  {id:"r5",name:"Prison Bar Guernsey",      type:"Retail",    date:"2026-05-19",players:["p5"],     location:"Port Adelaide Clubrooms",        status:"Planned",  approved:true, briefed:false,notes:""},
+  {id:"r6",name:"Turner Freeman",           type:"Commercial",date:"2026-05-11",players:["p2","p3"],location:"Turner Freeman Office, Adelaide", status:"Confirmed",approved:true, briefed:true, notes:""},
+  {id:"r7",name:"Pear Range",               type:"Retail",    date:null,        players:["p1","p2"],location:"TBC",                            status:"TBC",      approved:false,briefed:false,notes:""},
+  {id:"r8",name:"MG Campaign (Commercial)", type:"Commercial",date:"2026-05-22",players:["p9","p1"],location:"",                               status:"Tentative",approved:false,briefed:false,notes:""}
+];
+const schedule={
+  "2026-05-04":{a:"partial",    n:"Available from 2pm"},
+  "2026-05-05":{a:"unavailable",n:"Not Available"},
+  "2026-05-06":{a:"unavailable",n:"Player Day Off"},
+  "2026-05-07":{a:"partial",    n:"Available from 12pm"},
+  "2026-05-08":{a:"unavailable",n:"Not Available"},
+  "2026-05-09":{a:"weekend",    n:"Weekend"},
+  "2026-05-10":{a:"weekend",    n:"Weekend"},
+  "2026-05-11":{a:"partial",    n:"Available from 2pm"},
+  "2026-05-12":{a:"unavailable",n:"Darwin (away)"},
+  "2026-05-13":{a:"unavailable",n:"Darwin (away)"},
+  "2026-05-14":{a:"unavailable",n:"Darwin (away)"},
+  "2026-05-15":{a:"unavailable",n:"Darwin (away)"},
+  "2026-05-16":{a:"weekend",    n:"Weekend"},
+  "2026-05-17":{a:"weekend",    n:"Weekend"},
+  "2026-05-18":{a:"partial",    n:"Available from 2pm"},
+  "2026-05-19":{a:"partial",    n:"Available from 2pm"},
+  "2026-05-20":{a:"unavailable",n:"Not Available"},
+  "2026-05-21":{a:"unavailable",n:"Player Day Off"},
+  "2026-05-22":{a:"partial",    n:"Available from 1pm"},
+  "2026-05-23":{a:"weekend",    n:"Weekend"},
+  "2026-05-24":{a:"weekend",    n:"Weekend"},
+  "2026-05-25":{a:"cba",        n:"CBA Booked - Not Available all week"},
+  "2026-05-26":{a:"cba",        n:"AFL CBA Appearance - School Visits (All Players)"},
+  "2026-05-27":{a:"cba",        n:"CBA Booked - Not Available all week"},
+  "2026-05-28":{a:"cba",        n:"CBA Booked - Not Available all week / Day Off"},
+  "2026-05-29":{a:"cba",        n:"CBA Booked - Not Available all week / Day Off"},
+  "2026-05-30":{a:"weekend",    n:"Weekend"},
+  "2026-05-31":{a:"weekend",    n:"Weekend"},
+  "2026-06-01":{a:"partial",    n:"Available from 1pm"},
+  "2026-06-02":{a:"partial",    n:"Available from 1pm"},
+  "2026-06-03":{a:"unavailable",n:"Not Available"},
+  "2026-06-04":{a:"unavailable",n:"Player Day Off"},
+  "2026-06-05":{a:"unavailable",n:"Selected squad flying to Perth for GD"},
+  "2026-06-06":{a:"weekend",    n:"Weekend"},
+  "2026-06-07":{a:"weekend",    n:"Weekend"},
+  "2026-06-08":{a:"partial",    n:"Available from 2pm - CBA booked all players this week"},
+  "2026-06-09":{a:"cba",        n:"AFL CBA Appearance - School Visits (All Players)"},
+  "2026-06-10":{a:"unavailable",n:"Not Available"},
+  "2026-06-11":{a:"unavailable",n:"Player Day Off"},
+  "2026-06-12":{a:"partial",    n:"Available from 12pm"},
+  "2026-06-13":{a:"weekend",    n:"Weekend"},
+  "2026-06-14":{a:"weekend",    n:"Weekend"},
+  "2026-06-15":{a:"partial",    n:"Available from 2pm"},
+  "2026-06-16":{a:"partial",    n:"Available from 1:30pm"},
+  "2026-06-17":{a:"unavailable",n:"Not Available"},
+  "2026-06-18":{a:"unavailable",n:"Player Day Off"},
+  "2026-06-19":{a:"unavailable",n:"Selected squad flying to Melbourne for GD"},
+  "2026-06-20":{a:"weekend",    n:"Weekend"},
+  "2026-06-21":{a:"weekend",    n:"Weekend"}
+};
+const aflwPlayers=[
+  {id:"w1",name:"Matilda Scholz",num:"29",pos:"Ruck",asa:"Full ASA",bal:20,restricted:false,sponsor:"None",
+   img:"https://cdn11.bigcommerce.com/s-03dhqvtsze/images/stencil/original/image-manager/matilda-copy.jpg?t=1778222353",
+   squad:"aflw"}
+];
+var currentSquad="afl";
+const APPROVAL={Retail:["admin","retail-approver"],Commercial:["admin","commercial-approver"]};
+const BOARD_ID=18412284375;
+const REQUESTS_GROUP="group_mm35jzs7";
+const PLAYERS_GROUP="group_mm354464";
+const AFLW_PLAYERS_GROUP="group_mm35q3j5";
+const COL={
+  date:"date_mm35z010",location:"text_mm353efc",notes:"long_text_mm352xyz",status:"color_mm351c4p",
+  player_number:"text_mm35f5cc",position:"text_mm351tb2",balance:"numeric_mm3571tn",restricted:"boolean_mm35w6eq",photo:"text_mm35jtbf",
+  players_text:"text_mm35qb0p",req_type:"color_mm35cenq",briefed:"color_mm359ffs",approved:"color_mm35zm9j",
+  req_type_dropdown:"dropdown_mm38f2g1",time_required:"text_mm388at2"
+};
+const PLAYER_MONDAY_IDS={p1:11958337028,p2:11958315221,p3:11958315296,p4:11958326294,p5:11958337107,p6:11958359489,p7:11958326269,p8:11958337311,p9:11958315213,w1:11958701784};
+const REQUEST_MONDAY_IDS={r1:11958363260,r2:11958337135,r3:11958363421,r4:11958363243,r5:11958359634,r6:11958359408,r7:11958359477,r8:11958363426};
+var newItemIds={};
+var monday=null;
+// monday.com API token — replace with your personal API token from monday.com profile > Admin > API
+var MONDAY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDUxNzk2NCwiYWFpIjoxMSwidWlkIjo4MjY0Njg5NiwiaWFkIjoiMjAyNi0wNS0wNlQwNzoxOTowNi4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzA5Mjc2LCJyZ24iOiJ1c2UxIn0.S91_48zIq-aPoxjEBHuBuRLTSwPizmnHZsPQYGysQwU";
+
+function getMondayClient(){if(!monday&&window.mondaySdk){monday=window.mondaySdk();monday.setApiVersion("2024-01")}return monday}
+
+function mondayApi(query,vars){
+  // Prefer direct REST API if token is set (works in HTML embed without registered app)
+  if(MONDAY_TOKEN){
+    return fetch("https://api.monday.com/v2",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":MONDAY_TOKEN,"API-Version":"2024-01"},
+      body:JSON.stringify({query:query,variables:vars||{}})
+    }).then(function(r){return r.json()}).then(function(r){
+      if(r.errors){console.warn("monday API errors:",r.errors)}
+      return r;
+    }).catch(function(e){console.warn("monday fetch error:",e);return null});
+  }
+  // Fallback to SDK (works in registered monday app context)
+  var sdk=getMondayClient();
+  if(!sdk)return Promise.resolve(null);
+  return sdk.api(query,{variables:vars||{}}).catch(function(e){console.warn("monday API error:",e);return null});
+}
+function syncPlayerDetailsToMonday(playerId,p){
+  var mondayId=PLAYER_MONDAY_IDS[playerId];if(!mondayId)return;
+  var cv={};cv[COL.player_number]=String(p.num);cv[COL.position]=p.pos;cv[COL.restricted]={checked:p.restricted?"true":"false"};if(p.img)cv[COL.photo]=p.img;
+  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv){id}}',{bid:BOARD_ID,iid:mondayId,cv:JSON.stringify(cv)});
+  mondayApi('mutation($iid:ID!,$name:String!){change_item_value(item_id:$iid,board_id:'+BOARD_ID+',column_id:"name",value:$name){id}}',{iid:mondayId,name:p.name});
+}
+function syncBalanceToMonday(playerId,newBal){
+  var mondayId=PLAYER_MONDAY_IDS[playerId];if(!mondayId)return;
+  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv){id}}',{bid:BOARD_ID,iid:mondayId,cv:JSON.stringify({numeric_mm3571tn:String(newBal)})});
+}
+function syncRequestToMonday(reqId,fields){
+  var r=requests.find(function(x){return x.id===reqId});
+  var mondayId=REQUEST_MONDAY_IDS[reqId]||newItemIds[reqId]||(r&&r.mondayId);
+  if(!mondayId){if(r)createRequestOnMonday(r);return}
+  var cv={};
+  if(fields.status!==undefined)cv[COL.status]={label:fields.status};
+  if(fields.date!==undefined)cv[COL.date]=fields.date?{date:fields.date}:"";
+  if(fields.location!==undefined)cv[COL.location]=fields.location||"";
+  if(fields.notes!==undefined)cv[COL.notes]={text:fields.notes||""};
+  if(fields.time_required!==undefined)cv[COL.time_required]=fields.time_required||"";
+  if(fields.players!==undefined)cv[COL.players_text]=fields.players;
+  if(fields.briefed!==undefined)cv[COL.briefed]={label:fields.briefed?"Yes":"No"};
+  if(fields.approved!==undefined)cv[COL.approved]={label:fields.approved?"Approved":"Pending"};
+  if(fields.type!==undefined)cv[COL.req_type]={label:fields.type};
+  mondayApi('mutation($bid:ID!,$iid:ID!,$cv:JSON!){change_multiple_column_values(board_id:$bid,item_id:$iid,column_values:$cv,create_labels_if_missing:true){id}}',{bid:BOARD_ID,iid:mondayId,cv:JSON.stringify(cv)});
+}
+function createRequestOnMonday(req){
+  var playerNames=req.players.map(function(pid){var p=players.find(function(pl){return pl.id===pid});return p?p.name:""}).filter(Boolean).join(", ");
+  var cv={};
+  cv[COL.date]=req.date?{date:req.date}:"";cv[COL.location]=req.location||"";cv[COL.players_text]=playerNames;
+  cv[COL.status]={label:req.status};cv[COL.req_type]={label:req.type};
+  cv[COL.approved]={label:req.approved?"Approved":"Pending"};cv[COL.briefed]={label:req.briefed?"Yes":"No"};
+  cv[COL.req_type_dropdown]=req.type;
+  cv[COL.notes]={text:(req.submitter?"Requested by: "+req.submitter+(req.notes?" | "+req.notes:""):req.notes)||""};
+  if(req.time_required)cv[COL.time_required]=req.time_required;
+  mondayApi('mutation($bid:ID!,$gid:String!,$name:String!,$cv:JSON!){create_item(board_id:$bid,group_id:$gid,item_name:$name,column_values:$cv,create_labels_if_missing:true){id}}',
+    {bid:BOARD_ID,gid:REQUESTS_GROUP,name:req.name,cv:JSON.stringify(cv)}).then(function(r){
+    if(r&&r.data&&r.data.create_item){
+      var mondayId=parseInt(r.data.create_item.id,10);newItemIds[req.id]=mondayId;
+      var liveReq=requests.find(function(x){return x.id===req.id});if(liveReq)liveReq.mondayId=mondayId;
+    }
+  });
+}
+function deleteRequestOnMonday(reqId){
+  var mondayId=REQUEST_MONDAY_IDS[reqId]||newItemIds[reqId];if(!mondayId)return;
+  mondayApi('mutation($iid:ID!){delete_item(item_id:$iid){id}}',{iid:mondayId});
+}
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+var pinConfig={admin:"3942","retail-approver":"3973","commercial-approver":"1972","balance-updater":"1559"};
+function getRoleFromPin(pin){for(var role in pinConfig){if(pinConfig[role]===pin)return role}return null}
+let editingId=null,balEditingId=null,calYear=2026,calMonth=4;
+let filterDept="all",filterStatus="all",filterTime="active";
+let pinEntry="",accessLevel="viewer",ignoreConflict=false,mreqConflictOverride=false;
+function isoDate(y,m,d){return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0")}
+function fmtDate(s){if(!s)return"--";var d=new Date(s+"T12:00:00");return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}
+function sc(s){return s==="Confirmed"?"status-confirmed":s==="Tentative"?"status-tentative":s==="Planned"?"status-planned":"status-tbc"}
+function closeModal(id){document.getElementById(id).classList.remove("open")}
+function showToast(msg,type){var t=document.getElementById("toast");t.textContent=msg;t.className="toast show"+(type?" "+type:"");setTimeout(function(){t.className="toast"},2800)}
+function canApprove(type){return(APPROVAL[type]||[]).includes(accessLevel)}
+function visReqs(){return requests.filter(function(r){return !r.denied&&(r.approved||canApprove(r.type))})}
+function wkBounds(dateStr){var d=new Date(dateStr+"T12:00:00"),dow=d.getDay(),diff=dow===0?-6:1-dow;var mon=new Date(d);mon.setDate(d.getDate()+diff);var sun=new Date(mon);sun.setDate(mon.getDate()+6);return[mon.toISOString().slice(0,10),sun.toISOString().slice(0,10)]}
+(function(){var n=new Date();document.getElementById("stampDate").value=n.toISOString().slice(0,10)})();
+function saveStamp(){var d=document.getElementById("stampDate").value;if(!d){showToast("Pick a date","error");return}showToast("Balance date saved: "+fmtDate(d),"success")}
+function switchTab(tab,btn){
+  document.querySelectorAll(".tab-pane").forEach(function(p){p.classList.remove("active")});
+  document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.remove("active")});
+  document.getElementById("tab-"+tab).classList.add("active");
+  if(!btn)btn=document.querySelector('.tab-btn[data-tab="'+tab+'"]');
+  if(!btn)btn=document.querySelector('[data-tab="'+tab+'"]');
+  if(btn)btn.classList.add("active");
+  if(tab==="calendar")renderCalendar();
+  if(tab==="make-request")initMreqPlayers();
+  if(tab==="balances")renderBalancesTab();
+}
+function renderPlayers(){
+  var squadList=currentSquad==="aflw"?aflwPlayers:players;
+  var html="";
+  for(var i=0;i<squadList.length;i++){
+    var p=squadList[i];
+    var pR=visReqs().filter(function(r){return r.players.includes(p.id)});
+    var restrictedBadge=p.restricted?'<div class="player-restricted-badge">Restricted</div>':"";
+    var tags="";
+    tags+=p.asa==="Full ASA"?'<span class="tag tag-asa">Full ASA</span>':'<span class="tag tag-photo">Photo Usage Only</span>';
+    if(p.restricted)tags+='<span class="tag tag-photo">Alberton Only</span>';
+    if(p.sponsor==="Nike")tags+='<span class="tag tag-nike">Nike</span>';
+    if(p.sponsor==="Adidas")tags+='<span class="tag tag-adidas">Adidas</span>';
+    var editBtn=accessLevel!=="viewer"?'<button class="btn-sm btn-teal" onclick="openBalanceModal(\''+p.id+'\')">&#9998; Edit</button>':"";
+    var reqCount=pR.length?'<span class="req-count-badge">'+pR.length+"</span>":"";
+    html+='<div class="player-card">'
+      +'<div class="player-img-wrap"><img src="'+p.img+'" alt="'+p.name+'" loading="lazy" onerror="this.style.opacity=.2"><div class="player-number">'+p.num+"</div>"+restrictedBadge+"</div>"
+      +'<div class="player-body"><div class="player-name">'+p.name+"</div><div class=\"player-position\">"+p.pos+"</div>"
+      +'<div class="player-tags">'+tags+"</div>"
+      +'<div class="balance-section"><div class="balance-row"><span class="balance-label">ASA / CBA Balance</span><span class="balance-pct">'+p.bal+'%</span></div><div class="cba-bar"><div class="cba-fill" style="width:'+p.bal+'%"></div></div></div>'
+      +'<div class="player-actions"><button class="btn-sm btn-outline" style="flex:2" onclick="openPlayerRequests(\''+p.id+'\')">&#128203; Requests'+reqCount+"</button>"+editBtn+"</div></div></div>";
+  }
+  document.getElementById("playersGrid").innerHTML=html;
+}
+function openBalanceModal(pid){
+  balEditingId=pid;
+  var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});
+  if(!p)return;
+  document.getElementById("balModalTitle").textContent="Edit Player";
+  document.getElementById("balModalSub").textContent=p.squad==="aflw"?"AFLW Squad":"AFL Squad";
+  document.getElementById("ep-name").value=p.name;
+  document.getElementById("ep-number").value=p.num;
+  document.getElementById("ep-position").value=p.pos;
+  document.getElementById("ep-asa").value=p.asa;
+  document.getElementById("ep-balance").value=p.bal;
+  document.getElementById("ep-sponsor").value=p.sponsor||"None";
+  document.getElementById("ep-photo").value=p.img||"";
+  document.getElementById("ep-restricted").checked=p.restricted||false;
+  document.getElementById("balanceModal").classList.add("open");
+}
+function saveBalances(){
+  var p=players.find(function(pl){return pl.id===balEditingId})||aflwPlayers.find(function(pl){return pl.id===balEditingId});
+  if(!p)return;
+  var name=document.getElementById("ep-name").value.trim();
+  if(!name){showToast("Name cannot be empty","error");return}
+  var newBal=parseInt(document.getElementById("ep-balance").value,10);
+  if(isNaN(newBal)||newBal<0||newBal>100){showToast("Balance must be 0-100","error");return}
+  var oldBal=p.bal;
+  p.name=name;p.num=String(document.getElementById("ep-number").value||p.num);p.pos=document.getElementById("ep-position").value;
+  p.asa=document.getElementById("ep-asa").value;p.bal=newBal;p.sponsor=document.getElementById("ep-sponsor").value;
+  p.img=document.getElementById("ep-photo").value.trim()||p.img;p.restricted=document.getElementById("ep-restricted").checked;
+  closeModal("balanceModal");
+  if(newBal!==oldBal){var today=new Date().toISOString().slice(0,10);document.getElementById("stampDate").value=today;}
+  renderPlayers();
+  if(newBal!==oldBal)syncBalanceToMonday(balEditingId,newBal);
+  syncPlayerDetailsToMonday(balEditingId,p);
+  showToast(p.name+" updated","success");
+}
+function openPlayerRequests(pid){
+  var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});
+  var pR=visReqs().filter(function(r){return r.players.includes(pid)});
+  document.getElementById("prModalTitle").textContent=p.name;
+  document.getElementById("prModalSub").textContent=p.pos+" - #"+p.num+" - "+p.asa+" - ASA/CBA: "+p.bal+"%";
+  document.getElementById("prNewBtn").onclick=function(){closeModal("playerRequestsModal");openRequestModal(pid)};
+  var body=document.getElementById("prModalBody");
+  if(!pR.length){body.innerHTML='<div class="pr-empty"><div class="pr-empty-icon">&#128219;</div><div class="pr-empty-msg">No requests for '+p.name+' yet.</div></div>';}
+  else{
+    var html='<div class="pr-list">';
+    for(var i=0;i<pR.length;i++){
+      var r=pR[i];
+      var dateStr=r.date?'<span class="pr-item-detail">&#128197; '+fmtDate(r.date)+"</span>":'<span class="pr-item-detail" style="color:var(--tbc)">&#128197; TBC</span>';
+      var locStr=r.location?'<span class="pr-item-detail">&#128205; '+r.location+"</span>":"";
+      var briefStr=r.briefed?'<span class="pr-item-detail" style="color:var(--confirmed)">&#9989; Briefed to Trent</span>':"";
+      var tc=r.type==="Commercial"?"type-commercial":"type-retail";
+      var editBtn=accessLevel!=="viewer"?'<div style="margin-top:8px"><button class="btn-sm btn-outline" style="flex:none;padding:5px 10px" onclick="closeModal(\'playerRequestsModal\');openEditModal(\''+r.id+'\')">&#9998; Edit</button></div>':"";
+      html+='<div class="pr-item"><div class="pr-item-header"><div class="pr-item-name">'+r.name+'</div><span class="status-chip '+sc(r.status)+'">'+r.status+"</span></div>"
+        +'<div class="pr-item-meta"><span class="type-chip '+tc+'">'+r.type+"</span>"+dateStr+locStr+briefStr+"</div>"+editBtn+"</div>";
+    }
+    body.innerHTML=html+"</div>";
+  }
+  document.getElementById("playerRequestsModal").classList.add("open");
+}
+function calNav(dir){calMonth+=dir;if(calMonth<0){calMonth=11;calYear--}if(calMonth>11){calMonth=0;calYear++}renderCalendar()}
+function renderCalendar(){
+  document.getElementById("calMonthTitle").textContent=MONTHS[calMonth]+" "+calYear;
+  var c=document.getElementById("calDays");c.innerHTML="";
+  var fd=new Date(calYear,calMonth,1),ld=new Date(calYear,calMonth+1,0).getDate();
+  var td=new Date(),tiso=isoDate(td.getFullYear(),td.getMonth(),td.getDate());
+  var off=fd.getDay()-1;if(off<0)off=6;
+  for(var i=0;i<off;i++){var dd=new Date(calYear,calMonth,1-(off-i));c.appendChild(buildCell(dd.getFullYear(),dd.getMonth(),dd.getDate(),true,tiso))}
+  for(var d=1;d<=ld;d++)c.appendChild(buildCell(calYear,calMonth,d,false,tiso));
+  var rem=(7-((off+ld)%7))%7;
+  for(var j=1;j<=rem;j++){var dd2=new Date(calYear,calMonth+1,j);c.appendChild(buildCell(dd2.getFullYear(),dd2.getMonth(),dd2.getDate(),true,tiso))}
+}
+function buildCell(y,m,d,om,tiso){
+  var iso=isoDate(y,m,d),s=schedule[iso];
+  var dr=visReqs().filter(function(r){return r.date===iso});
+  var el=document.createElement("div");
+  var cls="cal-day"+(om?" other-month":"")+(iso===tiso?" today":"");
+  if(!om&&(s||dr.length))cls+=" clickable";
+  el.className=cls;
+  var bm={available:"bar-available",partial:"bar-partial",unavailable:"bar-unavailable",cba:"bar-cba",weekend:"bar-weekend"};
+  var tm={available:"Available",partial:s?s.n:"Partial",unavailable:"Not Available",cba:"CBA",weekend:""};
+  var inner='<div class="day-num">'+d+"</div>";
+  if(s&&bm[s.a])inner+='<div class="day-avail-bar '+bm[s.a]+'"></div>';
+  if(s&&tm[s.a])inner+='<div class="day-avail-text">'+tm[s.a]+"</div>";
+  if(dr.length){inner+='<div class="day-bookings">';for(var i=0;i<dr.length;i++){var r=dr[i];var cc=r.type==="Commercial"?"chip-commercial":r.status==="TBC"?"chip-tbc":"chip-retail";inner+='<div class="day-booking-chip '+cc+'">'+r.name+"</div>"}inner+="</div>"}
+  el.innerHTML=inner;
+  if(!om&&(s||dr.length)){(function(iso2,y2,m2,d2){el.addEventListener("click",function(){openDayDetail(iso2,y2,m2,d2)})})(iso,y,m,d)}
+  return el;
+}
+function openDayDetail(iso,y,m,d){
+  var s=schedule[iso];var dr=visReqs().filter(function(r){return r.date===iso});
+  document.getElementById("dayDetailTitle").textContent=new Date(y,m,d).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  var cm={available:"avail-available",partial:"avail-partial",unavailable:"avail-unavailable",cba:"avail-cba",weekend:"avail-weekend"};
+  var iem={available:"&#9989;",partial:"&#128336;",unavailable:"&#10060;",cba:"&#9888;&#65039;",weekend:"&#127958;&#65039;"};
+  var h="";
+  if(s)h+='<div class="day-detail-avail '+cm[s.a]+'">'+iem[s.a]+" "+s.n+"</div>";
+  h+='<div class="day-detail-bookings-title" style="margin-top:'+(s?"14px":"0")+'">'+(dr.length?"Requests on this day":"No requests on this day")+"</div>";
+  if(dr.length){h+='<div class="pr-list" style="margin-top:8px">';for(var i=0;i<dr.length;i++){var r=dr[i];var names=r.players.map(function(pid){var ap=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});return ap?ap.name:""}).filter(Boolean).join(", ");var tc=r.type==="Commercial"?"type-commercial":"type-retail";h+='<div class="pr-item"><div class="pr-item-header"><div class="pr-item-name">'+r.name+'</div><span class="status-chip '+sc(r.status)+'">'+r.status+"</span></div><div class=\"pr-item-meta\"><span class=\"type-chip "+tc+'">'+r.type+"</span>"+(names?'<span class="pr-item-detail">&#128100; '+names+"</span>":"")+(r.location?'<span class="pr-item-detail">&#128205; '+r.location+"</span>":"")+"</div></div>"}h+="</div>"}
+  else h+='<p style="color:var(--muted);font-size:13px;margin-top:8px">Click below to create a request.</p>';
+  document.getElementById("dayDetailBody").innerHTML=h;
+  document.getElementById("dayNewReqBtn").onclick=function(){closeModal("dayDetailModal");openRequestModal(null,iso)};
+  document.getElementById("dayDetailModal").classList.add("open");
+}
+function renderRequests(){
+  var today=new Date();today.setHours(0,0,0,0);
+  if(typeof updateApprovalBanner==="function")updateApprovalBanner();
+  var vis=visReqs();
+  var todayCount=new Date();todayCount.setHours(0,0,0,0);
+  var upcomingCount=vis.filter(function(r){if(!r.date)return true;return new Date(r.date+"T12:00:00")>=todayCount}).length;
+  document.getElementById("requestCount").textContent=upcomingCount;
+  if(filterDept!=="all")vis=vis.filter(function(r){return r.type===filterDept});
+  if(filterStatus!=="all")vis=vis.filter(function(r){return r.status===filterStatus});
+  if(filterTime==="active")vis=vis.filter(function(r){if(!r.approved&&canApprove(r.type))return true;if(!r.date)return true;return new Date(r.date+"T12:00:00")>=today});
+  else if(filterTime==="past")vis=vis.filter(function(r){if(!r.approved&&canApprove(r.type))return true;if(!r.date)return false;return new Date(r.date+"T12:00:00")<today});
+  var tb=document.getElementById("requestsTbody");
+  if(!vis.length){tb.innerHTML='<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted)">No requests found</td></tr>';return}
+  var html="";
+  for(var i=0;i<vis.length;i++){
+    var r=vis[i];
+    var names=r.players.map(function(pid){var ap=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});return ap?ap.name:""}).filter(Boolean);
+    var canEd=accessLevel!=="viewer"&&canApprove(r.type);
+    var eBtn=canEd?'<button class="btn-icon" onclick="openEditModal(\''+r.id+'\')">&#9998;</button>':"";
+    var dBtn=accessLevel==="admin"?'<button class="btn-icon danger" onclick="deleteRequest(\''+r.id+'\')">&#128465;</button>':"";
+    var aBtn=!r.approved&&canApprove(r.type)?'<button class="btn-icon" title="Approve" onclick="approveRequest(\''+r.id+'\')" style="color:var(--confirmed)">&#9989;</button>':"";
+    var pNote=!r.approved&&canApprove(r.type)?'<span class="pending-badge">&#8987; Pending your approval</span>':"";
+    var bNote=r.briefed?'<span style="font-size:10px;color:var(--confirmed);display:block;margin-top:2px">&#9989; Briefed to Trent</span>':"";
+    var tc=r.type==="Commercial"?"type-commercial":"type-retail";
+    var pillsHtml=names.length?names.map(function(n){return'<span class="player-pill">'+n+"</span>"}).join(""):'<span style="color:var(--muted);font-size:12px">--</span>';
+    html+='<tr class="'+(r.approved?"":"pending-row")+'">'
+      +"<td><strong>"+r.name+"</strong>"+pNote+bNote+"</td>"
+      +'<td><span class="type-chip '+tc+'">'+r.type+"</span></td>"
+      +"<td>"+(r.date?fmtDate(r.date):'<span style="color:var(--muted)">TBC</span>')+"</td>"
+      +'<td><div class="player-list-inline">'+pillsHtml+"</div></td>"
+      +"<td>"+(r.location||"--")+"</td>"
+      +"<td style='color:var(--muted);font-size:12px'>"+(r.time_required||"--")+"</td>"
+      +'<td><span class="status-chip '+sc(r.status)+'">'+r.status+"</span></td>"
+      +'<td><div class="action-btns">'+aBtn+eBtn+dBtn+"</div></td></tr>";
+  }
+  tb.innerHTML=html;
+}
+function approveRequest(id){var r=requests.find(function(x){return x.id===id});if(r){r.approved=true;renderRequests();renderCalendar();renderPlayers();syncRequestToMonday(id,{approved:true});showToast("Request approved","success")}}
+function setFilterDrop(group,val){if(group==="dept")filterDept=val;else if(group==="status")filterStatus=val;else if(group==="time")filterTime=val;renderRequests()}
+function deleteRequest(id){
+  var r=requests.find(function(x){return x.id===id});if(!r)return;
+  document.getElementById("confirmSubtitle").textContent=r.name;
+  document.getElementById("confirmOkBtn").onclick=function(){deleteRequestOnMonday(id);requests=requests.filter(function(x){return x.id!==id});closeModal("confirmModal");renderRequests();renderCalendar();renderPlayers();showToast("Request deleted","success")};
+  document.getElementById("confirmModal").classList.add("open");
+}
+function renderCheckboxes(cid,sel){
+  var allPlayers=players.concat(aflwPlayers);var html="";
+  for(var i=0;i<allPlayers.length;i++){
+    var p=allPlayers[i];var chk=sel.includes(p.id)?"checked":"";
+    html+='<label class="player-checkbox-item"><input type="checkbox" data-pid="'+p.id+'" '+chk+' onchange="checkConflicts()">'
+      +'<div><div class="pc-name">'+p.name+' <span style="color:var(--muted);font-weight:400">- #'+p.num+"</span></div>"
+      +'<div class="pc-meta">'+p.pos+" - "+p.asa+" - ASA/CBA: "+p.bal+'%</div>'
+      +'<div class="pc-conflict" id="cfc-'+cid+"-"+p.id+'"></div></div></label>';
+  }
+  document.getElementById(cid).innerHTML=html;
+}
+function toggleModalBriefed(wid,status){document.getElementById(wid).style.display=status==="Confirmed"?"block":"none"}
+function openRequestModal(pre,preDate){
+  ignoreConflict=false;document.getElementById("conflictAlert").classList.remove("visible");
+  ["f-name","f-location","f-notes","f-time","f-submitter"].forEach(function(id){var el=document.getElementById(id);if(el)el.value=""});
+  document.getElementById("f-date").value=preDate||"";document.getElementById("f-type").value="Retail";document.getElementById("f-status").value="TBC";
+  document.getElementById("f-briefed-wrap").style.display="none";document.getElementById("f-briefed").checked=false;
+  renderCheckboxes("playersCheckboxes",[]);
+  if(pre){setTimeout(function(){var cb=document.querySelector('#playersCheckboxes input[data-pid="'+pre+'"]');if(cb)cb.checked=true},50)}
+  document.getElementById("requestModalTitle").textContent="New Request";document.getElementById("requestModal").classList.add("open");
+}
+function checkConflicts(){
+  var date=document.getElementById("f-date").value;if(!date)return;
+  var sel=[].slice.call(document.querySelectorAll("#playersCheckboxes input:checked")).map(function(i){return i.dataset.pid});
+  var bounds=wkBounds(date),monISO=bounds[0],sunISO=bounds[1];var conflicts=[];
+  sel.forEach(function(pid){
+    var el=document.getElementById("cfc-playersCheckboxes-"+pid);
+    var bk=requests.filter(function(r){return r.date&&r.date>=monISO&&r.date<=sunISO&&r.players.includes(pid)&&r.id!==editingId});
+    if(bk.length){var p=players.find(function(pl){return pl.id===pid});conflicts.push((p?p.name:pid)+" booked this week: <strong>"+bk.map(function(r){return r.name}).join(", ")+"</strong>");if(el)el.innerHTML="Conflict: "+bk.map(function(r){return r.name}).join(", ")}
+    else{if(el)el.textContent=""}
+  });
+  var al=document.getElementById("conflictAlert");
+  if(conflicts.length&&!ignoreConflict){document.getElementById("conflictAlertBody").innerHTML=conflicts.join("<br>");al.classList.add("visible")}else al.classList.remove("visible");
+}
+function saveRequest(){
+  var name=document.getElementById("f-name").value.trim();if(!name){showToast("Enter a name","error");return}
+  var type=document.getElementById("f-type").value;var status=document.getElementById("f-status").value;
+  var pids=[].slice.call(document.querySelectorAll("#playersCheckboxes input:checked")).map(function(i){return i.dataset.pid});
+  var fSubmitter=document.getElementById("f-submitter")?document.getElementById("f-submitter").value.trim():"";
+  requests.unshift({id:"r"+Date.now(),name:name,date:document.getElementById("f-date").value||null,location:document.getElementById("f-location").value.trim(),time_required:document.getElementById("f-time").value.trim(),submitter:fSubmitter,type:type,status:status,notes:document.getElementById("f-notes").value.trim(),players:pids,approved:canApprove(type),briefed:document.getElementById("f-briefed").checked});
+  closeModal("requestModal");renderRequests();renderCalendar();renderPlayers();createRequestOnMonday(requests[0]);showToast("Saved!","success");
+}
+function openEditModal(id){
+  editingId=id;var r=requests.find(function(x){return x.id===id});if(!r)return;
+  document.getElementById("ef-name").value=r.name;document.getElementById("ef-date").value=r.date||"";document.getElementById("ef-location").value=r.location||"";
+  document.getElementById("ef-type").value=r.type;document.getElementById("ef-status").value=r.status;document.getElementById("ef-notes").value=r.notes||"";
+  document.getElementById("ef-time").value=r.time_required||"";document.getElementById("ef-briefed").checked=r.briefed||false;
+  document.getElementById("ef-briefed-wrap").style.display=r.status==="Confirmed"?"block":"none";
+  renderCheckboxes("editPlayersCheckboxes",r.players);document.getElementById("editModal").classList.add("open");
+}
+function saveEdit(){
+  var r=requests.find(function(x){return x.id===editingId});if(!r)return;
+  r.name=document.getElementById("ef-name").value.trim();r.date=document.getElementById("ef-date").value||null;
+  r.location=document.getElementById("ef-location").value.trim();r.time_required=document.getElementById("ef-time").value.trim();
+  r.type=document.getElementById("ef-type").value;r.status=document.getElementById("ef-status").value;r.notes=document.getElementById("ef-notes").value.trim();
+  r.briefed=document.getElementById("ef-briefed").checked;r.players=[].slice.call(document.querySelectorAll("#editPlayersCheckboxes input:checked")).map(function(i){return i.dataset.pid});
+  var syncId=editingId;closeModal("editModal");editingId=null;renderRequests();renderCalendar();renderPlayers();
+  var updatedR=requests.find(function(x){return x.id===syncId});
+  if(updatedR){var pNames=updatedR.players.map(function(pid){var ap=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});return ap?ap.name:""}).filter(Boolean).join(", ");syncRequestToMonday(syncId,{status:updatedR.status,date:updatedR.date,location:updatedR.location,notes:updatedR.notes,players:pNames,briefed:updatedR.briefed,approved:updatedR.approved,type:updatedR.type})}
+  showToast("Updated!","success");
+}
+function openPinModal(){
+  if(accessLevel!=="viewer"){
+    accessLevel="viewer";document.getElementById("accessBadge").className="access-badge";document.getElementById("accessLabel").textContent="Sign in";
+    document.getElementById("balancesTabBtn").style.display="none";document.getElementById("addPlayerBtn").style.display="none";
+    showToast("Signed out");renderPlayers();renderRequests();return;
+  }
+  pinEntry="";updatePinDots();document.getElementById("pinError").textContent="";document.getElementById("pinModal").classList.add("open");
+}
+function pinPress(d){if(pinEntry.length>=4)return;pinEntry+=d;updatePinDots();if(pinEntry.length===4)setTimeout(checkPin,150)}
+function pinClear(){pinEntry=pinEntry.slice(0,-1);updatePinDots()}
+function updatePinDots(){for(var i=0;i<4;i++)document.getElementById("pd"+i).classList.toggle("filled",i<pinEntry.length)}
+function checkPin(){
+  var lv=getRoleFromPin(pinEntry);
+  if(lv){
+    accessLevel=lv;
+    var lb={admin:"&#128308; Admin","retail-approver":"&#128993; Retail Approver","commercial-approver":"&#128994; Commercial Approver","balance-updater":"&#129695; Balance Updater"};
+    document.getElementById("accessBadge").className="access-badge logged-in";
+    document.getElementById("accessLabel").innerHTML=lb[lv]||lv;
+    closeModal("pinModal");
+    if(lv==="admin"){document.getElementById("balancesTabBtn").style.display="flex";document.getElementById("addPlayerBtn").style.display="flex";}
+    else if(lv==="balance-updater"){document.getElementById("balancesTabBtn").style.display="flex";document.getElementById("addPlayerBtn").style.display="none";}
+    else{document.getElementById("balancesTabBtn").style.display="none";document.getElementById("addPlayerBtn").style.display="none";}
+    filterDept="all";filterStatus="all";filterTime="active";
+    ["filterDeptSel","filterStatusSel"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="all"});
+    var ts=document.getElementById("filterTimeSel");if(ts)ts.value="active";
+    renderPlayers();renderRequests();
+    if(lv==="balance-updater")switchTab("balances",null);
+    else if(lv==="retail-approver"||lv==="commercial-approver")switchTab("requests",null);
+    showToast("Signed in","success");
+  } else {
+    document.getElementById("pinError").textContent="Incorrect PIN.";pinEntry="";updatePinDots();
+    setTimeout(function(){document.getElementById("pinError").textContent=""},2000);
+  }
+}
+function initMreqPlayers(){
+  var g=document.getElementById("mreqPlayersGrid");if(!g)return;
+  var allPlayersForReq=players.concat(aflwPlayers);var html="";
+  for(var i=0;i<allPlayersForReq.length;i++){
+    var p=allPlayersForReq[i];
+    html+='<div class="mreq-player-card" id="mreqpc-'+p.id+'" onclick="mreqToggle(event,\''+p.id+'\')">'
+      +'<input type="checkbox" data-pid="'+p.id+'" onclick="event.stopPropagation();mreqToggle(event,\''+p.id+'\')">'
+      +'<img class="mreq-player-photo" src="'+p.img+'" alt="'+p.name+'" onerror="this.style.opacity=.2">'
+      +'<div class="mreq-player-name">'+p.name+"</div>"
+      +'<div class="mreq-player-pos">#'+p.num+" - "+p.pos+"</div>"
+      +'<div class="mreq-player-bal">'+p.asa+" - "+p.bal+"%</div>"
+      +'<div class="mreq-player-conflict" id="mreqpconf-'+p.id+'"></div></div>';
+  }
+  g.innerHTML=html;updateMreqPills();
+}
+function mreqToggle(e,pid){var card=document.getElementById("mreqpc-"+pid);var cb=card.querySelector("input[type=checkbox]");if(e.target!==cb)cb.checked=!cb.checked;card.classList.toggle("selected",cb.checked);mreqCheckConflicts();updateMreqPills()}
+function updateMreqPills(){
+  var pb=document.getElementById("mreqSelectedPills");if(!pb)return;
+  var sel=[].slice.call(document.querySelectorAll("#mreqPlayersGrid input:checked")).map(function(i){return i.dataset.pid});
+  var html="";for(var i=0;i<sel.length;i++){var p=players.find(function(pl){return pl.id===sel[i]})||aflwPlayers.find(function(pl){return pl.id===sel[i]});if(p)html+='<div class="mreq-selected-pill">'+p.name+'<button onclick="mreqDesel(\''+p.id+'\')">&#215;</button></div>'}
+  pb.innerHTML=html;
+}
+function mreqDesel(pid){var card=document.getElementById("mreqpc-"+pid);var cb=card&&card.querySelector("input[type=checkbox]");if(cb){cb.checked=false;card.classList.remove("selected","conflicted")}mreqCheckConflicts();updateMreqPills()}
+function selectMreqType(btn){
+  document.querySelectorAll(".mreq-type-btn").forEach(function(b){b.classList.remove("active")});btn.classList.add("active");
+  var t=btn.dataset.val;var note=document.getElementById("mreqRoutingNote");
+  note.textContent=t==="Retail"?"Retail requests go to your Retail Approver for review.":"Commercial requests go to your Commercial Approver for review.";note.classList.add("show");mreqCheckConflicts();
+}
+function mreqStatusChanged(){document.getElementById("mreqBriefedWrap").style.display=document.getElementById("mreq-status").value==="Confirmed"?"flex":"none"}
+function mreqCheckConflicts(){
+  var date=document.getElementById("mreq-date").value;var ae=document.getElementById("mreqDateAvail");
+  if(date&&schedule[date]){var s=schedule[date];var cls={available:"mreq-date-available",partial:"mreq-date-partial",unavailable:"mreq-date-unavailable",cba:"mreq-date-cba",weekend:"mreq-date-weekend"};var ic={available:"&#9989;",partial:"&#128336;",unavailable:"&#10060;",cba:"&#9888;&#65039;",weekend:"&#127958;&#65039;"};ae.className="mreq-date-avail "+(cls[s.a]||"");ae.innerHTML=ic[s.a]+" "+s.n}else{ae.textContent=""}
+  if(!date)return;
+  var bounds=wkBounds(date),monISO=bounds[0],sunISO=bounds[1];
+  var sel=[].slice.call(document.querySelectorAll("#mreqPlayersGrid input:checked")).map(function(i){return i.dataset.pid});
+  var conflicts=[];
+  for(var i=0;i<players.length;i++){
+    var p=players[i];var card=document.getElementById("mreqpc-"+p.id);var ce=document.getElementById("mreqpconf-"+p.id);
+    var bk=requests.filter(function(r){return r.date&&r.date>=monISO&&r.date<=sunISO&&r.players.includes(p.id)});
+    if(bk.length&&sel.includes(p.id)){card.classList.add("conflicted");ce.textContent="Booked: "+bk.map(function(r){return r.name}).join(", ");conflicts.push("<strong>"+p.name+"</strong> booked this week: "+bk.map(function(r){return r.name}).join(", "))}
+    else{card.classList.remove("conflicted");ce.textContent=bk.length?"Week conflict: "+bk.map(function(r){return r.name}).join(", "):"";if(bk.length&&!sel.includes(p.id))ce.style.color="#d97706"}
+  }
+  var ce2=document.getElementById("mreq-conflict");
+  if(conflicts.length&&!mreqConflictOverride){document.getElementById("mreq-conflict-body").innerHTML=conflicts.join("<br>");ce2.style.display="block"}
+  else if(!conflicts.length){ce2.style.display="none";mreqConflictOverride=false}
+}
+function mreqIgnoreConflict(){mreqConflictOverride=true;document.getElementById("mreq-conflict").style.display="none"}
+function submitMakeRequest(){
+  var name=document.getElementById("mreq-name").value.trim();var date=document.getElementById("mreq-date").value;var loc=document.getElementById("mreq-location").value.trim();
+  var typeBtn=document.querySelector(".mreq-type-btn.active");var type=typeBtn?typeBtn.dataset.val:"Retail";var status=document.getElementById("mreq-status").value;
+  var notes=document.getElementById("mreq-notes").value.trim();var sub=document.getElementById("mreq-submitter").value.trim();var briefed=document.getElementById("mreq-briefed").checked;
+  var sel=[].slice.call(document.querySelectorAll("#mreqPlayersGrid input:checked")).map(function(i){return i.dataset.pid});
+  if(!name){showToast("Enter a request name","error");return}if(!date){showToast("Select a date","error");return}if(!sel.length){showToast("Select at least one player","error");return}
+  var timeReq=document.getElementById("mreq-time").value.trim();
+  var nr={id:"r"+Date.now(),name:name,date:date,players:sel,location:loc,time_required:timeReq,type:type,status:status,briefed:briefed,approved:canApprove(type),submitter:sub,notes:notes};
+  requests.unshift(nr);renderRequests();renderCalendar();renderPlayers();createRequestOnMonday(nr);
+  var pn=sel.map(function(pid){var ap=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});return ap?ap.name:""}).filter(Boolean).join(", ");
+  var an=nr.approved?'<br><span style="color:var(--confirmed)">&#9989; Approved</span>':'<br><span style="color:var(--tentative)">&#8987; Pending approval from '+type+' Approver</span>';
+  var tc=type==="Commercial"?"type-commercial":"type-retail";
+  document.getElementById("mreqSuccessDetail").innerHTML="<strong>"+name+"</strong><br>"+fmtDate(date)+(loc?" - "+loc:"")+"<br>"+pn+an+'<br><span style="margin-top:6px;display:inline-block"><span class="status-chip '+sc(status)+'">'+status+'</span> <span class="type-chip '+tc+'">'+type+"</span></span>";
+  document.getElementById("mreqForm").style.display="none";document.getElementById("mreqSuccess").style.display="block";document.getElementById("mreq-conflict").style.display="none";showToast("Submitted!","success");
+}
+function mreqReset(){
+  ["mreq-name","mreq-date","mreq-location","mreq-notes","mreq-submitter","mreq-time"].forEach(function(id){document.getElementById(id).value=""});
+  document.getElementById("mreq-status").value="TBC";document.getElementById("mreqBriefedWrap").style.display="none";document.getElementById("mreq-briefed").checked=false;
+  document.querySelectorAll(".mreq-type-btn").forEach(function(b,i){b.classList.toggle("active",i===0)});
+  document.getElementById("mreqRoutingNote").classList.remove("show");document.getElementById("mreqDateAvail").textContent="";
+  document.getElementById("mreq-conflict").style.display="none";document.getElementById("mreqForm").style.display="flex";document.getElementById("mreqSuccess").style.display="none";
+  mreqConflictOverride=false;initMreqPlayers();
+}
+
+
+function updateAdminPin(){
+  var current=document.getElementById("adminPinCurrent").value.trim();
+  var newPin=document.getElementById("adminPinNew").value.trim();
+  var confirmPin=document.getElementById("adminPinConfirm").value.trim();
+  if(current!==pinConfig.admin){showToast("Current PIN incorrect","error");return}
+  if(!newPin||newPin.length<4){showToast("New PIN must be at least 4 digits","error");return}
+  for(var r in pinConfig){if(r!=="admin"&&pinConfig[r]===newPin){showToast("PIN already in use by another role","error");return}}
+  if(newPin!==confirmPin){showToast("PINs do not match","error");return}
+  pinConfig.admin=newPin;
+  ["adminPinCurrent","adminPinNew","adminPinConfirm"].forEach(function(id){document.getElementById(id).value=""});
+  showToast("Admin PIN updated — use new PIN next time you sign in","success");
+}
+function updateRolePin(role,newId,confirmId){
+  var newPin=document.getElementById(newId).value.trim();var confirm=document.getElementById(confirmId).value.trim();
+  if(!newPin||newPin.length<4){showToast("PIN must be at least 4 digits","error");return}
+  if(newPin===pinConfig.admin){showToast("PIN cannot match admin PIN","error");return}
+  for(var r in pinConfig){if(r!==role&&pinConfig[r]===newPin){showToast("PIN already in use by another role","error");return}}
+  if(newPin!==confirm){showToast("PINs do not match","error");return}
+  pinConfig[role]=newPin;document.getElementById(newId).value="";document.getElementById(confirmId).value="";
+  var labels={"retail-approver":"Retail Approver","commercial-approver":"Commercial Approver","balance-updater":"Balance Updater"};
+  showToast((labels[role]||role)+" PIN updated","success");
+}
+function renderBalancesTab(){
+  renderBalancesTable("balancesAFLBody",players);renderBalancesTable("balancesAFLWBody",aflwPlayers);
+  var stamp=document.getElementById("stampDate").value;document.getElementById("balancesStampDisplay").textContent=stamp?fmtDate(stamp):"Not set";
+}
+function renderBalancesTable(tbodyId,squad){
+  var tbody=document.getElementById(tbodyId);if(!tbody)return;tbody.innerHTML="";
+  for(var i=0;i<squad.length;i++){
+    (function(p){
+      var tr=document.createElement("tr");tr.id="balrow-"+p.id;
+      var tdPhoto=document.createElement("td");var img=document.createElement("img");img.className="bal-player-photo";img.src=p.img;img.onerror=function(){this.style.opacity=.2};tdPhoto.appendChild(img);tr.appendChild(tdPhoto);
+      var tdName=document.createElement("td");tdName.innerHTML='<div><strong>'+p.name+'</strong></div><div style="margin-top:3px"><span class="bal-number">#'+p.num+'</span></div>';tr.appendChild(tdName);
+      var tdAsa=document.createElement("td");tdAsa.textContent=p.asa;tr.appendChild(tdAsa);
+      var tdCur=document.createElement("td");tdCur.innerHTML='<div class="bal-bar-wrap"><div class="bal-bar"><div class="bal-bar-fill" id="balbar-'+p.id+'" style="width:'+p.bal+'%"></div></div><span>'+p.bal+'%</span></div>';tr.appendChild(tdCur);
+      var tdInput=document.createElement("td");var wrap=document.createElement("div");wrap.style.cssText="display:flex;align-items:center;gap:8px";
+      var inp=document.createElement("input");inp.type="number";inp.min=0;inp.max=100;inp.className="bal-input";inp.id="balinput-"+p.id;inp.value=p.bal;inp.setAttribute("data-pid",p.id);
+      inp.addEventListener("input",function(){balInputChanged(this.getAttribute("data-pid"),this)});
+      var pct=document.createElement("span");pct.className="bal-pct";pct.textContent="%";
+      var dot=document.createElement("span");dot.className="bal-changed-badge";dot.id="baldot-"+p.id;dot.innerHTML="&#9679; Changed";
+      wrap.appendChild(inp);wrap.appendChild(pct);wrap.appendChild(dot);tdInput.appendChild(wrap);tr.appendChild(tdInput);
+      var tdReset=document.createElement("td");var resetBtn=document.createElement("button");resetBtn.className="btn-icon";resetBtn.title="Reset";resetBtn.innerHTML="&#8635;";resetBtn.setAttribute("data-pid",p.id);
+      resetBtn.addEventListener("click",function(){balReset(this.getAttribute("data-pid"))});tdReset.appendChild(resetBtn);tr.appendChild(tdReset);
+      tbody.appendChild(tr);
+    })(squad[i]);
+  }
+}
+function balInputChanged(pid,input){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});if(!p)return;var v=parseInt(input.value,10);var changed=!isNaN(v)&&v!==p.bal;input.classList.toggle("changed",changed);var dot=document.getElementById("baldot-"+pid);if(dot)dot.classList.toggle("show",changed)}
+function balReset(pid){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});if(!p)return;var input=document.getElementById("balinput-"+pid);if(input){input.value=p.bal;input.classList.remove("changed","saved")}var dot=document.getElementById("baldot-"+pid);if(dot)dot.classList.remove("show")}
+function saveAllBalances(){
+  var allSquad=players.concat(aflwPlayers);var changed=[];
+  for(var i=0;i<allSquad.length;i++){var p=allSquad[i];var input=document.getElementById("balinput-"+p.id);if(!input)continue;var v=parseInt(input.value,10);if(!isNaN(v)&&v>=0&&v<=100&&v!==p.bal)changed.push({p:p,newVal:v,input:input})}
+  if(!changed.length){showToast("No changes to save","error");return}
+  var today=new Date().toISOString().slice(0,10);document.getElementById("stampDate").value=today;document.getElementById("balancesStampDisplay").textContent=fmtDate(today);
+  var saveStatus=document.getElementById("balancesSaveStatus");saveStatus.textContent="Saving "+changed.length+" change"+(changed.length>1?"s":"")+"...";
+  for(var j=0;j<changed.length;j++){(function(item){item.p.bal=item.newVal;var bar=document.getElementById("balbar-"+item.p.id);if(bar)bar.style.width=item.newVal+"%";item.input.classList.remove("changed");item.input.classList.add("saved");var dot=document.getElementById("baldot-"+item.p.id);if(dot)dot.classList.remove("show");syncBalanceToMonday(item.p.id,item.newVal)})(changed[j])}
+  renderPlayers();setTimeout(function(){saveStatus.textContent="&#9989; "+changed.length+" balance"+(changed.length>1?"s":"")+" saved to board — "+fmtDate(today)},800);showToast(changed.length+" balance"+(changed.length>1?"s":"")+" saved","success");
+}
+function updateApprovalBanner(){
+  if(accessLevel!=="retail-approver"&&accessLevel!=="commercial-approver"){document.getElementById("approvalBanner").style.display="none";return}
+  var pending=requests.filter(function(r){return !r.approved&&canApprove(r.type)});var banner=document.getElementById("approvalBanner");
+  if(!pending.length){banner.style.display="none";return}
+  var typeLabel=accessLevel==="retail-approver"?"Retail":"Commercial";
+  document.getElementById("approvalBannerTitle").textContent=pending.length===1?"You have 1 "+typeLabel+" request pending your approval":"You have "+pending.length+" "+typeLabel+" requests pending your approval";
+  document.getElementById("approvalBannerSub").textContent=pending.map(function(r){return r.name}).join(", ");banner.style.display="block";
+}
+function openPendingModal(){
+  var pending=requests.filter(function(r){return !r.approved&&canApprove(r.type)});
+  var typeLabel=accessLevel==="retail-approver"?"Retail":"Commercial";
+  document.getElementById("pendingModalSub").textContent=pending.length+" "+typeLabel+" request"+(pending.length!==1?"s":"")+" awaiting your approval";
+  var body=document.getElementById("pendingModalBody");
+  if(!pending.length){body.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted)">&#127881; No pending requests — all caught up!</div>';document.getElementById("pendingModal").classList.add("open");return}
+  body.innerHTML="";var wrap=document.createElement("div");wrap.style.cssText="display:flex;flex-direction:column;gap:12px";
+  for(var i=0;i<pending.length;i++){
+    (function(r){
+      var names=r.players.map(function(pid){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});return p?p.name:""}).filter(Boolean).join(", ");
+      var card=document.createElement("div");card.className="pending-review-card";
+      var header=document.createElement("div");header.className="pending-card-header";
+      var nameEl=document.createElement("div");nameEl.className="pending-review-name";nameEl.textContent=r.name;
+      var tc=document.createElement("span");tc.className="type-chip "+(r.type==="Commercial"?"type-commercial":"type-retail");tc.textContent=r.type;
+      header.appendChild(nameEl);header.appendChild(tc);card.appendChild(header);
+      var grid=document.createElement("div");grid.className="pending-info-grid";
+      function addInfo(icon,label,val){if(!val)return;var cell=document.createElement("div");cell.className="pending-info-cell";cell.innerHTML='<span class="pending-info-label">'+icon+" "+label+'</span><span class="pending-info-val">'+val+'</span>';grid.appendChild(cell)}
+      addInfo("📅","Date",r.date?fmtDate(r.date):null);addInfo("⏰","Time Required",r.time_required);addInfo("📍","Location",r.location);addInfo("👤","Players",names);addInfo("🙋","Requested By",r.submitter);addInfo("📋","Notes",r.notes);
+      card.appendChild(grid);
+      var commentWrap=document.createElement("div");commentWrap.className="pending-comment-wrap";
+      var commentLabel=document.createElement("label");commentLabel.className="pending-comment-label";commentLabel.textContent="Add a comment (optional)";
+      var commentInput=document.createElement("textarea");commentInput.className="pending-comment-input";commentInput.id="pcomment-"+r.id;commentInput.placeholder="e.g. Approved — please confirm with Trent by Friday";
+      commentWrap.appendChild(commentLabel);commentWrap.appendChild(commentInput);card.appendChild(commentWrap);
+      var actions=document.createElement("div");actions.className="pending-action-row";
+      var approveBtn=document.createElement("button");approveBtn.className="pending-approve-btn2";approveBtn.innerHTML='<span>✓</span> Approve';
+      approveBtn.addEventListener("click",(function(rid){return function(){var comment=document.getElementById("pcomment-"+rid);pendingApproveWithComment(rid,comment?comment.value.trim():"")}})(r.id));
+      var denyBtn=document.createElement("button");denyBtn.className="pending-deny-btn2";denyBtn.innerHTML='<span>✕</span> Deny';
+      denyBtn.addEventListener("click",(function(rid){return function(){var comment=document.getElementById("pcomment-"+rid);pendingDenyWithComment(rid,comment?comment.value.trim():"")}})(r.id));
+      actions.appendChild(approveBtn);actions.appendChild(denyBtn);card.appendChild(actions);wrap.appendChild(card);
+    })(pending[i]);
+  }
+  body.appendChild(wrap);document.getElementById("pendingModal").classList.add("open");
+}
+function pendingApproveWithComment(id,comment){
+  var r=requests.find(function(x){return x.id===id});if(!r)return;r.approved=true;if(comment)r.approverComment=comment;
+  syncRequestToMonday(id,{approved:true,notes:(r.notes?(r.notes+(comment?" | Approver: "+comment:"")):(comment?"Approver: "+comment:""))});
+  renderRequests();renderCalendar();renderPlayers();showToast(r.name+" approved","success");updateApprovalBanner();
+  var stillPending=requests.filter(function(x){return !x.approved&&canApprove(x.type)});if(stillPending.length)openPendingModal();else closeModal("pendingModal");
+}
+function pendingDenyWithComment(id,comment){
+  var r=requests.find(function(x){return x.id===id});if(!r)return;r.denied=true;r.status="TBC";if(comment)r.approverComment=comment;
+  syncRequestToMonday(id,{status:"TBC",approved:false,notes:(r.notes?(r.notes+(comment?" | Denied: "+comment:"")):(comment?"Denied: "+comment:""))});
+  renderRequests();renderCalendar();renderPlayers();showToast(r.name+" denied","error");updateApprovalBanner();
+  var stillPending=requests.filter(function(x){return !x.approved&&!x.denied&&canApprove(x.type)});if(stillPending.length)openPendingModal();else closeModal("pendingModal");
+}
+function switchSquad(squad,btn){currentSquad=squad;document.querySelectorAll(".squad-tab-btn").forEach(function(b){b.classList.remove("active")});btn.classList.add("active");renderPlayers()}
+function openAddPlayerModal(){["ap-name","ap-photo"].forEach(function(id){document.getElementById(id).value=""});document.getElementById("ap-number").value="";document.getElementById("ap-position").value="";document.getElementById("ap-asa").value="Full ASA";document.getElementById("ap-balance").value="50";document.getElementById("ap-sponsor").value="None";document.getElementById("ap-restricted").checked=false;document.getElementById("addPlayerModal").classList.add("open")}
+function saveNewPlayer(){
+  var name=document.getElementById("ap-name").value.trim();var num=document.getElementById("ap-number").value.trim();var pos=document.getElementById("ap-position").value;
+  if(!name){showToast("Enter player name","error");return}if(!num){showToast("Enter jersey number","error");return}if(!pos){showToast("Select a position","error");return}
+  var bal=parseInt(document.getElementById("ap-balance").value,10)||50;var asa=document.getElementById("ap-asa").value;var sponsor=document.getElementById("ap-sponsor").value;var restricted=document.getElementById("ap-restricted").checked;
+  var photo=document.getElementById("ap-photo").value.trim();if(!photo)photo="https://cdn.jsdelivr.net/gh/alohe/avatars/png/vibrent_1.png";
+  var newId="p"+Date.now();var newPlayer={id:newId,name:name,num:String(num),pos:pos,asa:asa,bal:bal,restricted:restricted,sponsor:sponsor,img:photo};
+  if(currentSquad==="aflw"){newPlayer.squad="aflw";aflwPlayers.push(newPlayer)}else players.push(newPlayer);
+  closeModal("addPlayerModal");renderPlayers();createPlayerOnMonday(newPlayer);showToast(name+" added","success");
+}
+function createPlayerOnMonday(p){
+  var cv={};cv[COL.player_number]=String(p.num);cv[COL.position]=p.pos;cv[COL.balance]=String(p.bal);cv[COL.restricted]={checked:p.restricted?"true":"false"};if(p.img)cv[COL.photo]=p.img;
+  mondayApi("mutation($bid:ID!,$gid:String!,$name:String!,$cv:JSON!){create_item(board_id:$bid,group_id:$gid,item_name:$name,column_values:$cv){id}}",
+    {bid:BOARD_ID,gid:(p.squad==="aflw"?AFLW_PLAYERS_GROUP:PLAYERS_GROUP),name:p.name,cv:JSON.stringify(cv)}).then(function(r){if(r&&r.data&&r.data.create_item)PLAYER_MONDAY_IDS[p.id]=parseInt(r.data.create_item.id,10)});
+}
+function applyAccessLevel(level){
+  if(!level||level==="none")return;accessLevel=level;
+  var labels={admin:"&#128308; Admin","retail-approver":"&#128993; Retail Approver","commercial-approver":"&#128994; Commercial Approver","balance-updater":"&#129695; Balance Updater",viewer:"&#9898; Viewer"};
+  var badge=document.getElementById("accessBadge");var label=document.getElementById("accessLabel");
+  if(badge&&label){badge.className="access-badge logged-in";label.innerHTML=labels[level]||level;badge.onclick=function(){accessLevel="viewer";badge.className="access-badge";label.textContent="Sign in";badge.onclick=openPinModal;document.getElementById("balancesTabBtn").style.display="none";document.getElementById("addPlayerBtn").style.display="none";renderPlayers();renderRequests()}}
+  if(level==="admin"){document.getElementById("balancesTabBtn").style.display="flex";document.getElementById("addPlayerBtn").style.display="flex"}
+  renderPlayers();renderRequests();
+}
+(function(){
+  if(!window.mondaySdk)return;
+  var sdk=window.mondaySdk();monday=sdk;sdk.setApiVersion("2024-01");
+  var identityResolved=false;
+  function resolveIdentity(userId){if(identityResolved)return;identityResolved=true;var mondayUserId=parseInt(userId,10);var userRoles={};userRoles[82646896]="admin";var role=userRoles[mondayUserId];if(role&&role!=="none")applyAccessLevel(role)}
+  function loadBalances(){sdk.api('{boards(ids:[18412284375]){items_page(limit:50){items{id name column_values(ids:["numeric_mm3571tn"]){id value}}}}}').then(function(res){if(!res||!res.data)return;var items=res.data.boards[0].items_page.items;var idToPlayer={};Object.keys(PLAYER_MONDAY_IDS).forEach(function(pid){idToPlayer[String(PLAYER_MONDAY_IDS[pid])]=pid});items.forEach(function(item){var pid=idToPlayer[item.id];if(pid){var val=item.column_values[0]&&item.column_values[0].value;if(val){var num=parseFloat(JSON.parse(val));if(!isNaN(num)){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});if(p)p.bal=Math.round(num)}}}});renderPlayers()}).catch(function(){});}
+  sdk.listen("context",function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadBalances()});
+  sdk.get("context").then(function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id)}).catch(function(){});
+  setTimeout(function(){sdk.api("{me{id name}}").then(function(res){if(res&&res.data&&res.data.me)resolveIdentity(res.data.me.id)}).catch(function(){})},600);
+})();
+renderPlayers();renderRequests();renderCalendar();
+</script>
+</body>
+</html>
