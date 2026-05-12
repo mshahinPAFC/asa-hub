@@ -671,32 +671,21 @@ var MONDAY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDUxNzk2NCwiYWFpIjoxMSwidWlkI
 
 function getMondayClient(){if(!monday&&window.mondaySdk){monday=window.mondaySdk();monday.setApiVersion("2024-01")}return monday}
 
-// SDK ready flag — set to true once context listener fires
 var SDK_READY=false;
 
 function mondayApi(query,vars){
-  var sdk=getMondayClient();
-  if(sdk&&SDK_READY){
-    // SDK is initialised — use sdk.api() which handles auth seamlessly
-    return sdk.api(query,{variables:vars||{}}).then(function(r){
-      if(r&&r.errors)console.warn("monday API errors:",r.errors);
-      return r;
-    }).catch(function(e){
-      console.warn("SDK api failed, falling back to token fetch:",e);
-      return mondayApiFetch(query,vars);
-    });
-  }
-  // Fallback: personal token fetch (works outside monday iframe)
-  return mondayApiFetch(query,vars);
-}
-
-function mondayApiFetch(query,vars){
-  if(!MONDAY_TOKEN)return Promise.resolve(null);
+  // Always use personal token fetch — works from inside monday iframe (no CORS)
+  // sdk.api() mutations unreliable due to message channel timeout in board view
+  if(!MONDAY_TOKEN){console.warn("No monday token set");return Promise.resolve(null)}
   return fetch("https://api.monday.com/v2",{
     method:"POST",
     headers:{"Content-Type":"application/json","Authorization":MONDAY_TOKEN,"API-Version":"2024-01"},
     body:JSON.stringify({query:query,variables:vars||{}})
-  }).then(function(r){return r.json()}).catch(function(e){console.warn("monday fetch error:",e);return null});
+  }).then(function(r){return r.json()}).then(function(r){
+    if(r&&r.errors){console.warn("monday API errors:",JSON.stringify(r.errors))}
+    else{console.log("monday sync OK")}
+    return r;
+  }).catch(function(e){console.warn("monday fetch error:",e);return null});
 }
 function syncPlayerDetailsToMonday(playerId,p){
   var mondayId=PLAYER_MONDAY_IDS[playerId];if(!mondayId)return;
