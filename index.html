@@ -671,9 +671,22 @@ var MONDAY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDUxNzk2NCwiYWFpIjoxMSwidWlkI
 
 function getMondayClient(){if(!monday&&window.mondaySdk){monday=window.mondaySdk();monday.setApiVersion("2024-01")}return monday}
 
+// SDK ready flag — set to true once context listener fires
+var SDK_READY=false;
+
 function mondayApi(query,vars){
-  // Use direct REST fetch as primary — reliable from GitHub Pages hosted app
-  // SDK context listener handles identity/auto-login separately
+  var sdk=getMondayClient();
+  if(sdk&&SDK_READY){
+    // SDK is initialised — use sdk.api() which handles auth seamlessly
+    return sdk.api(query,{variables:vars||{}}).then(function(r){
+      if(r&&r.errors)console.warn("monday API errors:",r.errors);
+      return r;
+    }).catch(function(e){
+      console.warn("SDK api failed, falling back to token fetch:",e);
+      return mondayApiFetch(query,vars);
+    });
+  }
+  // Fallback: personal token fetch (works outside monday iframe)
   return mondayApiFetch(query,vars);
 }
 
@@ -1236,7 +1249,7 @@ function applyAccessLevel(level){
   var identityResolved=false;
   function resolveIdentity(userId){if(identityResolved)return;identityResolved=true;var mondayUserId=parseInt(userId,10);var userRoles={82646896:"admin",41198358:"commercial-approver",62081586:"commercial-approver",29892421:"retail-approver",96759461:"balance-updater"};var role=userRoles[mondayUserId];if(role&&role!=="none")applyAccessLevel(role)}
   function loadBalances(){sdk.api('{boards(ids:[18412284375]){items_page(limit:50){items{id name column_values(ids:["numeric_mm3571tn"]){id value}}}}}').then(function(res){if(!res||!res.data)return;var items=res.data.boards[0].items_page.items;var idToPlayer={};Object.keys(PLAYER_MONDAY_IDS).forEach(function(pid){idToPlayer[String(PLAYER_MONDAY_IDS[pid])]=pid});items.forEach(function(item){var pid=idToPlayer[item.id];if(pid){var val=item.column_values[0]&&item.column_values[0].value;if(val){var num=parseFloat(JSON.parse(val));if(!isNaN(num)){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});if(p)p.bal=Math.round(num)}}}});renderPlayers()}).catch(function(){});}
-  sdk.listen("context",function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadBalances()});
+  sdk.listen("context",function(res){var ctx=res.data||res;SDK_READY=true;console.log("monday SDK ready");if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadBalances()});
   sdk.get("context").then(function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id)}).catch(function(){});
   setTimeout(function(){sdk.api("{me{id name}}").then(function(res){if(res&&res.data&&res.data.me)resolveIdentity(res.data.me.id)}).catch(function(){})},600);
 })();
