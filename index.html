@@ -672,20 +672,8 @@ var MONDAY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDUxNzk2NCwiYWFpIjoxMSwidWlkI
 function getMondayClient(){if(!monday&&window.mondaySdk){monday=window.mondaySdk();monday.setApiVersion("2024-01")}return monday}
 
 function mondayApi(query,vars){
-  console.log("mondayApi called, vars:",JSON.stringify(vars));
-  // Primary: use SDK (works as registered monday app — full auth context)
-  var sdk=getMondayClient();
-  if(sdk){
-    return sdk.api(query,{variables:vars||{}}).then(function(r){
-      if(r&&r.errors)console.warn("monday API errors:",r.errors);
-      else console.log("monday API success:",JSON.stringify(r).slice(0,100));
-      return r;
-    }).catch(function(e){
-      console.warn("SDK api failed, trying direct fetch:",e);
-      return mondayApiFetch(query,vars);
-    });
-  }
-  // Fallback: direct REST fetch with personal token
+  // Use direct REST fetch as primary — reliable from GitHub Pages hosted app
+  // SDK context listener handles identity/auto-login separately
   return mondayApiFetch(query,vars);
 }
 
@@ -710,7 +698,6 @@ function syncBalanceToMonday(playerId,newBal){
 function syncRequestToMonday(reqId,fields){
   var r=requests.find(function(x){return x.id===reqId});
   var mondayId=REQUEST_MONDAY_IDS[reqId]||newItemIds[reqId]||(r&&r.mondayId);
-  console.log("syncRequestToMonday",reqId,"mondayId:",mondayId,"fields:",JSON.stringify(fields));
   if(!mondayId){if(r)createRequestOnMonday(r);return}
   var cv={};
   if(fields.status!==undefined)cv[COL.status]={label:fields.status};
@@ -1247,7 +1234,7 @@ function applyAccessLevel(level){
   if(!window.mondaySdk)return;
   var sdk=window.mondaySdk();monday=sdk;sdk.setApiVersion("2024-01");
   var identityResolved=false;
-  function resolveIdentity(userId){if(identityResolved)return;identityResolved=true;var mondayUserId=parseInt(userId,10);var userRoles={};userRoles[82646896]="admin";var role=userRoles[mondayUserId];if(role&&role!=="none")applyAccessLevel(role)}
+  function resolveIdentity(userId){if(identityResolved)return;identityResolved=true;var mondayUserId=parseInt(userId,10);var userRoles={82646896:"admin",41198358:"commercial-approver",62081586:"commercial-approver",29892421:"retail-approver",96759461:"balance-updater"};var role=userRoles[mondayUserId];if(role&&role!=="none")applyAccessLevel(role)}
   function loadBalances(){sdk.api('{boards(ids:[18412284375]){items_page(limit:50){items{id name column_values(ids:["numeric_mm3571tn"]){id value}}}}}').then(function(res){if(!res||!res.data)return;var items=res.data.boards[0].items_page.items;var idToPlayer={};Object.keys(PLAYER_MONDAY_IDS).forEach(function(pid){idToPlayer[String(PLAYER_MONDAY_IDS[pid])]=pid});items.forEach(function(item){var pid=idToPlayer[item.id];if(pid){var val=item.column_values[0]&&item.column_values[0].value;if(val){var num=parseFloat(JSON.parse(val));if(!isNaN(num)){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});if(p)p.bal=Math.round(num)}}}});renderPlayers()}).catch(function(){});}
   sdk.listen("context",function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadBalances()});
   sdk.get("context").then(function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id)}).catch(function(){});
