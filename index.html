@@ -574,27 +574,21 @@
 </div>
 <div class="toast" id="toast"></div>
 <script>
-const players=[
-  {id:"p1",name:"Ollie Wines",        num:"16",pos:"Midfielder",  asa:"Full ASA",        bal:49, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556800/Ollie%20Wines.png"},
-  {id:"p2",name:"Todd Marshall",      num:"4", pos:"Key Defender",asa:"Full ASA",        bal:35, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556636/Todd%20Marshall.png"},
-  {id:"p3",name:"Miles Bergman",      num:"14",pos:"Defender",    asa:"Full ASA",        bal:65, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556459/Miles%20Bergman.webp"},
-  {id:"p4",name:"Sam Powell-Pepper",  num:"2", pos:"Forward",     asa:"Full ASA",        bal:40, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556290/Sam%20Powell-Pepper.webp"},
-  {id:"p5",name:"Zak Butters",        num:"9", pos:"Midfielder",  asa:"Full ASA",        bal:28, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946551494/Zak%20Butters.png"},
-  {id:"p6",name:"Connor Rozee",       num:"1", pos:"Midfielder",  asa:"Full ASA",        bal:40, restricted:false,sponsor:"Nike",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2943074325/Connor%20Rozee.png"},
-  {id:"p7",name:"Jason Horne-Francis",num:"18",pos:"Midfielder",  asa:"Full ASA",        bal:50, restricted:false,sponsor:"None",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946556909/Jason%20Horne-Francis.png"},
-  {id:"p8",name:"Aliir Aliir",        num:"21",pos:"Key Defender",asa:"Photo Usage Only",bal:50, restricted:true, sponsor:"Nike",  img:"https://pafc-team.monday.com/protected_static/709276/resources/2946558097/Alirr%20Aliir.png"},
-  {id:"p9",name:"Mitch Georgiades",   num:"19",pos:"Key Forward", asa:"Photo Usage Only",bal:21, restricted:true, sponsor:"Adidas",img:"https://pafc-team.monday.com/protected_static/709276/resources/2946558266/Mitch%20Georgiades.png"}
-];
-let requests=[
-  {id:"r1",name:"MG Campaign",             type:"Commercial",date:"2026-05-04",players:["p3","p4"],location:"Adelaide Studio",                status:"Confirmed",approved:true, briefed:true, time_required:"2 hours",notes:""},
-  {id:"r2",name:"SDNR Guernsey Shoot",      type:"Retail",    date:"2026-05-04",players:[],         location:"Alberton Oval",                  status:"Planned",  approved:true, briefed:false,notes:""},
-  {id:"r3",name:"Health Partners",          type:"Commercial",date:"2026-05-26",players:["p5","p4","p6"],location:"Health Partners Studio",     status:"Confirmed",approved:true, briefed:true, notes:""},
-  {id:"r4",name:"Australian Outdoor Living",type:"Commercial",date:"2026-05-04",players:["p6"],     location:"Adelaide Showgrounds",           status:"Confirmed",approved:true, briefed:true, notes:""},
-  {id:"r5",name:"Prison Bar Guernsey",      type:"Retail",    date:"2026-05-19",players:["p5"],     location:"Port Adelaide Clubrooms",        status:"Planned",  approved:true, briefed:false,notes:""},
-  {id:"r6",name:"Turner Freeman",           type:"Commercial",date:"2026-05-11",players:["p2","p3"],location:"Turner Freeman Office, Adelaide", status:"Confirmed",approved:true, briefed:true, notes:""},
-  {id:"r7",name:"Pear Range",               type:"Retail",    date:null,        players:["p1","p2"],location:"TBC",                            status:"TBC",      approved:false,briefed:false,notes:""},
-  {id:"r8",name:"MG Campaign (Commercial)", type:"Commercial",date:"2026-05-22",players:["p9","p1"],location:"",                               status:"Tentative",approved:false,briefed:false,notes:""}
-];
+// Players and requests loaded from monday board on startup
+var players=[];
+var requests=[];
+
+// Sponsor data not stored on board - keyed by monday item ID
+var PLAYER_SPONSORS={
+  "11958359489":"Nike",
+  "11958337311":"Nike",
+  "11958315213":"Adidas"
+};
+// ASA type not stored on board - keyed by monday item ID  
+var PLAYER_ASA_TYPES={
+  "11958337311":"Photo Usage Only",  // Aliir Aliir
+  "11958315213":"Photo Usage Only"   // Mitch Georgiades
+};
 const schedule={
   "2026-05-04":{a:"partial",    n:"Available from 2pm"},
   "2026-05-05":{a:"unavailable",n:"Not Available"},
@@ -646,11 +640,8 @@ const schedule={
   "2026-06-20":{a:"weekend",    n:"Weekend"},
   "2026-06-21":{a:"weekend",    n:"Weekend"}
 };
-const aflwPlayers=[
-  {id:"w1",name:"Matilda Scholz",num:"29",pos:"Ruck",asa:"Full ASA",bal:20,restricted:false,sponsor:"None",
-   img:"https://cdn11.bigcommerce.com/s-03dhqvtsze/images/stencil/original/image-manager/matilda-copy.jpg?t=1778222353",
-   squad:"aflw"}
-];
+// AFLW players loaded from board (populated in loadFromBoard)
+var aflwPlayers=[];
 var currentSquad="afl";
 const APPROVAL={Retail:["admin","retail-approver"],Commercial:["admin","commercial-approver"]};
 const BOARD_ID="18412284375";
@@ -663,8 +654,9 @@ const COL={
   players_text:"text_mm35qb0p",req_type:"color_mm35cenq",briefed:"color_mm359ffs",approved:"color_mm35zm9j",
   req_type_dropdown:"dropdown_mm38f2g1",time_required:"text_mm388at2"
 };
-const PLAYER_MONDAY_IDS={p1:11958337028,p2:11958315221,p3:11958315296,p4:11958326294,p5:11958337107,p6:11958359489,p7:11958326269,p8:11958337311,p9:11958315213,w1:11958701784};
-const REQUEST_MONDAY_IDS={r1:11958363260,r2:11958337135,r3:11958363421,r4:11958363243,r5:11958359634,r6:11958359408,r7:11958359477,r8:11958363426};
+// Dynamic ID maps - populated when board data loads
+var PLAYER_MONDAY_IDS={};
+var REQUEST_MONDAY_IDS={};
 var newItemIds={};
 var monday=null;
 var MONDAY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDUxNzk2NCwiYWFpIjoxMSwidWlkIjo4MjY0Njg5NiwiaWFkIjoiMjAyNi0wNS0wNlQwNzoxOTowNi4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzA5Mjc2LCJyZ24iOiJ1c2UxIn0.S91_48zIq-aPoxjEBHuBuRLTSwPizmnHZsPQYGysQwU";
@@ -1237,12 +1229,87 @@ function applyAccessLevel(level){
   var sdk=window.mondaySdk();monday=sdk;sdk.setApiVersion("2024-01");
   var identityResolved=false;
   function resolveIdentity(userId){if(identityResolved)return;identityResolved=true;var mondayUserId=parseInt(userId,10);var userRoles={82646896:"admin",41198358:"commercial-approver",62081586:"commercial-approver",29892421:"retail-approver",96759461:"balance-updater"};var role=userRoles[mondayUserId];if(role&&role!=="none")applyAccessLevel(role)}
-  function loadBalances(){sdk.api('{boards(ids:[18412284375]){items_page(limit:50){items{id name column_values(ids:["numeric_mm3571tn"]){id value}}}}}').then(function(res){if(!res||!res.data)return;var items=res.data.boards[0].items_page.items;var idToPlayer={};Object.keys(PLAYER_MONDAY_IDS).forEach(function(pid){idToPlayer[String(PLAYER_MONDAY_IDS[pid])]=pid});items.forEach(function(item){var pid=idToPlayer[item.id];if(pid){var val=item.column_values[0]&&item.column_values[0].value;if(val){var num=parseFloat(JSON.parse(val));if(!isNaN(num)){var p=players.find(function(pl){return pl.id===pid})||aflwPlayers.find(function(pl){return pl.id===pid});if(p)p.bal=Math.round(num)}}}});renderPlayers()}).catch(function(){});}
-  sdk.listen("context",function(res){var ctx=res.data||res;SDK_READY=true;console.log("monday SDK ready");if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadBalances()});
+  function loadFromBoard(){
+    mondayApi('{boards(ids:[18412284375]){items_page(limit:200){items{id name group{id}column_values{id text}}}}}',{}).then(function(res){
+      if(!res||!res.data||!res.data.boards)return;
+      var items=res.data.boards[0].items_page.items;
+      var newPlayers=[];var newAFLW=[];var newRequests=[];
+      var pidCounter=1;
+      items.forEach(function(item){
+        var cv={};
+        item.column_values.forEach(function(col){cv[col.id]=col.text||""});
+        var mondayId=String(item.id);
+        if(item.group.id==="group_mm354464"||item.group.id==="group_mm35q3j5"){
+          // Player item
+          var pid="p"+pidCounter++;
+          PLAYER_MONDAY_IDS[pid]=parseInt(mondayId,10);
+          var isAFLW=item.group.id==="group_mm35q3j5";
+          var p={
+            id:pid,
+            name:item.name,
+            num:cv["text_mm35f5cc"]||"",
+            pos:cv["text_mm351tb2"]||"",
+            asa:PLAYER_ASA_TYPES[mondayId]||"Full ASA",
+            bal:parseInt(cv["numeric_mm3571tn"],10)||0,
+            restricted:cv["boolean_mm35w6eq"]==="v"||cv["boolean_mm35w6eq"]==="true",
+            sponsor:PLAYER_SPONSORS[mondayId]||"None",
+            img:cv["text_mm35jtbf"]||""
+          };
+          if(isAFLW){p.squad="aflw";newAFLW.push(p)}else{newPlayers.push(p)}
+        } else if(item.group.id==="group_mm35jzs7"){
+          // Request item — skip blank "New item" placeholders
+          if(!item.name||item.name==="New item")return;
+          var rid="r"+mondayId;
+          REQUEST_MONDAY_IDS[rid]=parseInt(mondayId,10);
+          var playerNames=(cv["text_mm35qb0p"]||"").split(",").map(function(n){return n.trim()}).filter(Boolean);
+          // Map player names to IDs (will be resolved after players are built)
+          newRequests.push({
+            id:rid,
+            mondayId:parseInt(mondayId,10),
+            name:item.name,
+            type:cv["color_mm35cenq"]||"Retail",
+            date:cv["date_mm35z010"]||null,
+            location:cv["text_mm353efc"]||"",
+            time_required:cv["text_mm388at2"]||"",
+            status:cv["color_mm351c4p"]||"TBC",
+            approved:cv["color_mm35zm9j"]==="Approved",
+            briefed:cv["color_mm359ffs"]==="Yes",
+            notes:cv["long_text_mm352xyz"]||"",
+            _playerNames:playerNames
+          });
+        }
+      });
+      // Resolve player names to IDs
+      var allPlayers=newPlayers.concat(newAFLW);
+      newRequests.forEach(function(r){
+        r.players=r._playerNames.map(function(name){
+          var p=allPlayers.find(function(pl){return pl.name===name});
+          return p?p.id:null;
+        }).filter(Boolean);
+        delete r._playerNames;
+      });
+      // Update global arrays
+      players=newPlayers;
+      // Update AFLW - keep existing if board returns none (preserve static AFLW data as fallback)
+      if(newAFLW.length>0)aflwPlayers.splice(0,aflwPlayers.length);
+      newAFLW.forEach(function(p){aflwPlayers.push(p)});
+      requests=newRequests;
+      console.log("Board loaded:",players.length,"AFL players,",aflwPlayers.length,"AFLW players,",requests.length,"requests");
+      // Show loading state while board data loads
+document.getElementById("playersGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">&#9889; Loading from board...</div>';
+renderRequests();renderCalendar();
+      // Update balances tab if visible
+      var balTab=document.getElementById("tab-balances");
+      if(balTab&&balTab.classList.contains("active"))renderBalancesTab();
+    }).catch(function(e){console.warn("loadFromBoard error:",e)});
+  }
+  sdk.listen("context",function(res){var ctx=res.data||res;SDK_READY=true;console.log("monday SDK ready");if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadFromBoard()});
   sdk.get("context").then(function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id)}).catch(function(){});
-  setTimeout(function(){sdk.api("{me{id name}}").then(function(res){if(res&&res.data&&res.data.me)resolveIdentity(res.data.me.id)}).catch(function(){})},600);
+  setTimeout(function(){sdk.api("{me{id name}}").then(function(res){if(res&&res.data&&res.data.me)resolveIdentity(res.data.me.id)}).catch(function(){})},600);setTimeout(function(){if(players.length===0)loadFromBoard()},1500);
 })();
-renderPlayers();renderRequests();renderCalendar();
+// Show loading state while board data loads
+document.getElementById("playersGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">&#9889; Loading from board...</div>';
+renderRequests();renderCalendar();
 </script>
 </body>
 </html>
