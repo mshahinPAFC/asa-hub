@@ -666,18 +666,22 @@ function getMondayClient(){if(!monday&&window.mondaySdk){monday=window.mondaySdk
 var SDK_READY=false;
 
 function mondayApi(query,vars){
-  // Always use personal token fetch — works from inside monday iframe (no CORS)
-  // sdk.api() mutations unreliable due to message channel timeout in board view
-  if(!MONDAY_TOKEN){console.warn("No monday token set");return Promise.resolve(null)}
-  return fetch("https://api.monday.com/v2",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":MONDAY_TOKEN,"API-Version":"2024-01"},
-    body:JSON.stringify({query:query,variables:vars||{}})
-  }).then(function(r){return r.json()}).then(function(r){
-    if(r&&r.errors){console.warn("monday API errors:",JSON.stringify(r.errors))}
-    else{console.log("monday sync OK")}
-    return r;
-  }).catch(function(e){console.warn("monday fetch error:",e);return null});
+  // Try SDK first, fall back to token fetch
+  var sdk=getMondayClient();
+  var sdkPromise=sdk?sdk.api(query,{variables:vars||{}}).catch(function(){return null}):Promise.resolve(null);
+  return sdkPromise.then(function(r){
+    if(r&&!r.errors)return r; // SDK worked
+    // SDK failed or returned errors - use token fetch
+    if(!MONDAY_TOKEN)return null;
+    return fetch("https://api.monday.com/v2",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":MONDAY_TOKEN,"API-Version":"2024-01"},
+      body:JSON.stringify({query:query,variables:vars||{}})
+    }).then(function(res){return res.json()}).then(function(r){
+      if(r&&r.errors)console.warn("monday API errors:",r.errors);
+      return r;
+    }).catch(function(e){console.warn("monday fetch error:",e);return null});
+  });
 }
 function syncPlayerDetailsToMonday(playerId,p){
   var mondayId=PLAYER_MONDAY_IDS[playerId];if(!mondayId)return;
@@ -1231,7 +1235,11 @@ function applyAccessLevel(level){
   function resolveIdentity(userId){if(identityResolved)return;identityResolved=true;var mondayUserId=parseInt(userId,10);var userRoles={82646896:"admin",41198358:"commercial-approver",62081586:"commercial-approver",29892421:"retail-approver",96759461:"balance-updater"};var role=userRoles[mondayUserId];if(role&&role!=="none")applyAccessLevel(role)}
   function loadFromBoard(){
     mondayApi('{boards(ids:[18412284375]){items_page(limit:200){items{id name group{id}column_values{id text}}}}}',{}).then(function(res){
-      if(!res||!res.data||!res.data.boards)return;
+      if(!res||!res.data||!res.data.boards){
+      console.warn("Board load returned no data, retrying in 2s...");
+      setTimeout(function(){if(players.length===0)loadFromBoard();},2000);
+      return;
+    }
       var items=res.data.boards[0].items_page.items;
       var newPlayers=[];var newAFLW=[];var newRequests=[];
       var pidCounter=1;
@@ -1301,7 +1309,7 @@ renderRequests();renderCalendar();
       // Update balances tab if visible
       var balTab=document.getElementById("tab-balances");
       if(balTab&&balTab.classList.contains("active"))renderBalancesTab();
-    }).catch(function(e){console.warn("loadFromBoard error:",e)});
+    }).catch(function(e){console.warn("loadFromBoard error:",e);setTimeout(function(){if(players.length===0){console.log("Retrying...");loadFromBoard();}},2000);});
   }
   sdk.listen("context",function(res){var ctx=res.data||res;SDK_READY=true;console.log("monday SDK ready");if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id);loadFromBoard()});
   sdk.get("context").then(function(res){var ctx=res.data||res;if(ctx&&ctx.user&&ctx.user.id)resolveIdentity(ctx.user.id)}).catch(function(){});
